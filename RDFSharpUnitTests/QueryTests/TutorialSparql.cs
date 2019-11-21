@@ -2,6 +2,8 @@
 using RDFSharp.Query;
 using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Reflection;
 using System.Text;
 using Xunit;
 
@@ -11,6 +13,15 @@ namespace RDFSharpTests.QueryTests
 {
     public class TutorialSparql
     {
+        private string GetPath(string relativePath)
+        {
+            var codeBaseUrl = new Uri(Assembly.GetExecutingAssembly().CodeBase);
+            var codeBasePath = Uri.UnescapeDataString(codeBaseUrl.AbsolutePath);
+            var dirPath = Path.GetDirectoryName(codeBasePath);
+            return Path.Combine(dirPath, relativePath);
+        }
+
+
         /// <summary>
         /// https://www.w3.org/TR/sparql11-overview/
         /// 1 Introduction
@@ -20,7 +31,8 @@ namespace RDFSharpTests.QueryTests
         public void RDFGraphFromFileTest()
         {
             // The example data is in file "Test1.ttl"
-            RDFGraph graph = RDFGraph.FromFile( RDFModelEnums.RDFFormats.Turtle, @"C:\Users\philippel\Documents\GitHub\RDFSharp\RDFSharpTests\Files\Test1.ttl");
+            string filePath = GetPath(@"Files\Test1.ttl");
+            RDFGraph graph = RDFGraph.FromFile( RDFModelEnums.RDFFormats.Turtle, filePath);
 
             Assert.Equal(11, graph.TriplesCount);
         }
@@ -32,7 +44,8 @@ namespace RDFSharpTests.QueryTests
         [Fact]
         public void Test1()
         {
-            RDFGraph graph = RDFGraph.FromFile(RDFModelEnums.RDFFormats.Turtle, @"C:\Users\philippel\Documents\GitHub\RDFSharp\RDFSharpTests\Files\Test1.ttl");
+            string filePath = GetPath(@"Files\Test1.ttl");
+            RDFGraph graph = RDFGraph.FromFile(RDFModelEnums.RDFFormats.Turtle, filePath);
 
             RDFSelectQuery selectQuery = new RDFSelectQuery();
 
@@ -91,7 +104,7 @@ WHERE {
             RDFSelectQueryResult selectQueryResult = selectQuery.ApplyToGraph(graph);
 
             // EXPORT SELECT QUERY RESULTS TO SPARQL XML FORMAT (FILE)
-            selectQueryResult.ToSparqlXmlResult(@"C:\TEMP\select_results.srq");
+            //selectQueryResult.ToSparqlXmlResult(@"C:\TEMP\Test1.srq");
 
             #region Generated result file
             /*
@@ -169,7 +182,8 @@ WHERE {
         [Fact]
         public void Test2()
         {
-            RDFGraph graph = RDFGraph.FromFile(RDFModelEnums.RDFFormats.Turtle, @"C:\Users\philippel\Documents\GitHub\RDFSharp\RDFSharpTests\Files\Test1.ttl");
+            string filePath = GetPath(@"Files\Test1.ttl");
+            RDFGraph graph = RDFGraph.FromFile(RDFModelEnums.RDFFormats.Turtle, filePath);
 
             RDFSelectQuery selectQuery = new RDFSelectQuery();
             selectQuery.AddPrefix(RDFNamespaceRegister.GetByPrefix("foaf"));
@@ -250,7 +264,7 @@ GROUP BY ?PERSON ?NAME
             RDFSelectQueryResult selectQueryResult = selectQuery.ApplyToGraph(graph);
 
             // EXPORT SELECT QUERY RESULTS TO SPARQL XML FORMAT (FILE)
-            selectQueryResult.ToSparqlXmlResult(@"C:\TEMP\select_results.srq");
+            //selectQueryResult.ToSparqlXmlResult(@"C:\TEMP\Test2.srq");
 
             /*
              * Got result

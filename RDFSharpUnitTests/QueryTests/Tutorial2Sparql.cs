@@ -2,6 +2,8 @@
 using RDFSharp.Query;
 using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
 using Xunit;
@@ -12,11 +14,20 @@ namespace RDFSharpTests.QueryTests
 {
     public class Tutorial2Sparql
     {
+        private string GetPath(string relativePath)
+        {
+            var codeBaseUrl = new Uri(Assembly.GetExecutingAssembly().CodeBase);
+            var codeBasePath = Uri.UnescapeDataString(codeBaseUrl.AbsolutePath);
+            var dirPath = Path.GetDirectoryName(codeBasePath);
+            return Path.Combine(dirPath, relativePath);
+        }
+
         [Fact]
         public void CheckWeCanLoadTestFile()
         {
-            // The example data is in file "Test1.ttl"
-            RDFGraph graph = RDFGraph.FromFile(RDFModelEnums.RDFFormats.Turtle, @"C:\Users\philippel\Documents\GitHub\RDFSharp\RDFSharpTests\Files\Test2.ttl");
+            // The example data is in file "Test2.ttl"
+            string filePath = GetPath(@"Files\Test2.ttl");
+            RDFGraph graph = RDFGraph.FromFile(RDFModelEnums.RDFFormats.Turtle, filePath);
 
             Assert.Equal(1, graph.TriplesCount);
         }
@@ -44,7 +55,8 @@ WHERE
         [Fact]
         public void WritingSingleQuery_Detailled()
         {
-            RDFGraph graph = RDFGraph.FromFile(RDFModelEnums.RDFFormats.Turtle, @"C:\Users\philippel\Documents\GitHub\RDFSharp\RDFSharpTests\Files\Test2.ttl");
+            string filePath = GetPath(@"Files\Test2.ttl");
+            RDFGraph graph = RDFGraph.FromFile(RDFModelEnums.RDFFormats.Turtle, filePath);
 
             RDFSelectQuery selectQuery = new RDFSelectQuery();
 
@@ -89,7 +101,7 @@ WHERE {
             RDFSelectQueryResult selectQueryResult = selectQuery.ApplyToGraph(graph);
 
             // EXPORT SELECT QUERY RESULTS TO SPARQL XML FORMAT (FILE)
-            selectQueryResult.ToSparqlXmlResult(@"C:\TEMP\select_results.srq");
+            // selectQueryResult.ToSparqlXmlResult(@"C:\TEMP\WritingSingleQuery_Detailled.srq");
 
             #region Generated result file
             /*
@@ -120,7 +132,8 @@ WHERE {
         [Fact]
         public void WritingSingleQuery_Short()
         {
-            RDFGraph graph = RDFGraph.FromFile(RDFModelEnums.RDFFormats.Turtle, @"C:\Users\philippel\Documents\GitHub\RDFSharp\RDFSharpTests\Files\Test2.ttl");
+            string filePath = GetPath(@"Files\Test2.ttl");
+            RDFGraph graph = RDFGraph.FromFile(RDFModelEnums.RDFFormats.Turtle, filePath);
 
             // Create variables
             var title = new RDFVariable("title");
@@ -138,7 +151,7 @@ WHERE {
             RDFSelectQueryResult selectQueryResult = selectQuery.ApplyToGraph(graph);
 
             // EXPORT SELECT QUERY RESULTS TO SPARQL XML FORMAT (FILE)
-            selectQueryResult.ToSparqlXmlResult(@"C:\TEMP\select_results.srq");
+            //selectQueryResult.ToSparqlXmlResult(@"C:\TEMP\WritingSingleQuery_Short.srq");
 
             Assert.Equal(1, selectQueryResult.SelectResultsCount);
 
@@ -152,7 +165,8 @@ WHERE {
         [Fact]
         public void MultipleMatches()
         {
-            RDFGraph graph = RDFGraph.FromFile(RDFModelEnums.RDFFormats.Turtle, @"C:\Users\philippel\Documents\GitHub\RDFSharp\RDFSharpTests\Files\Test3.ttl");
+            string filePath = GetPath(@"Files\Test3.ttl");
+            RDFGraph graph = RDFGraph.FromFile(RDFModelEnums.RDFFormats.Turtle, filePath);
 
             /*
              * Query
@@ -186,7 +200,7 @@ WHERE {
             RDFSelectQueryResult selectQueryResult = selectQuery.ApplyToGraph(graph);
 
             // EXPORT SELECT QUERY RESULTS TO SPARQL XML FORMAT (FILE)
-            selectQueryResult.ToSparqlXmlResult(@"C:\TEMP\select_results.srq");
+            //selectQueryResult.ToSparqlXmlResult(@"C:\TEMP\MultipleMatches.srq");
 
             Assert.Equal(2, selectQueryResult.SelectResultsCount);
 
@@ -211,7 +225,8 @@ WHERE {
         [Fact]
         public void MultipleMatches_WithNamespace()
         {
-            RDFGraph graph = RDFGraph.FromFile(RDFModelEnums.RDFFormats.Turtle, @"C:\Users\philippel\Documents\GitHub\RDFSharp\RDFSharpTests\Files\Test3.ttl");
+            string filePath = GetPath(@"Files\Test3.ttl");
+            RDFGraph graph = RDFGraph.FromFile(RDFModelEnums.RDFFormats.Turtle, filePath);
 
             /*
              * Query
@@ -247,7 +262,7 @@ WHERE {
             RDFSelectQueryResult selectQueryResult = selectQuery.ApplyToGraph(graph);
 
             // EXPORT SELECT QUERY RESULTS TO SPARQL XML FORMAT (FILE)
-            selectQueryResult.ToSparqlXmlResult(@"C:\TEMP\select_results.srq");
+            //selectQueryResult.ToSparqlXmlResult(@"C:\TEMP\MultipleMatches_WithNamespace.srq");
 
             Assert.Equal(2, selectQueryResult.SelectResultsCount);
 
@@ -272,7 +287,8 @@ WHERE {
         [Fact]
         public void MatchingLiteralsWithLanguageTags()
         {
-            RDFGraph graph = RDFGraph.FromFile(RDFModelEnums.RDFFormats.Turtle, @"C:\Users\philippel\Documents\GitHub\RDFSharp\RDFSharpTests\Files\Test4.ttl");
+            string filePath = GetPath(@"Files\Test4.ttl");
+            RDFGraph graph = RDFGraph.FromFile(RDFModelEnums.RDFFormats.Turtle, filePath);
 
             // This following query has no solution because "cat" is not the same RDF literal as "cat"@en:
             // SELECT ?v WHERE { ?v ?p "cat" }
@@ -293,7 +309,7 @@ WHERE {
             RDFSelectQueryResult selectQueryResult = selectQuery.ApplyToGraph(graph);
 
             // EXPORT SELECT QUERY RESULTS TO SPARQL XML FORMAT (FILE)
-            selectQueryResult.ToSparqlXmlResult(@"C:\TEMP\select_results.srq");
+            //selectQueryResult.ToSparqlXmlResult(@"C:\TEMP\MatchingLiteralsWithLanguageTags.srq");
 
             Assert.Equal(0, selectQueryResult.SelectResultsCount);
 
@@ -322,7 +338,8 @@ WHERE {
         [Fact]
         public void MatchingLiteralsWithNumericTypes()
         {
-            RDFGraph graph = RDFGraph.FromFile(RDFModelEnums.RDFFormats.Turtle, @"C:\Users\philippel\Documents\GitHub\RDFSharp\RDFSharpTests\Files\Test4.ttl");
+            string filePath = GetPath(@"Files\Test4.ttl");
+            RDFGraph graph = RDFGraph.FromFile(RDFModelEnums.RDFFormats.Turtle, filePath);
 
             // This following query has no solution because "cat" is not the same RDF literal as "cat"@en:
             // SELECT ?v WHERE { ?v ?p 42 }
@@ -352,13 +369,13 @@ WHERE {
             RDFSelectQueryResult selectQueryResult = selectQuery.ApplyToGraph(graph);
 
             // EXPORT SELECT QUERY RESULTS TO SPARQL XML FORMAT (FILE)
-            selectQueryResult.ToSparqlXmlResult(@"C:\TEMP\select_results.srq");
+            //selectQueryResult.ToSparqlXmlResult(@"C:\TEMP\MatchingLiteralsWithNumericTypes.srq");
 
             Assert.Equal(1, selectQueryResult.SelectResultsCount);
             Assert.Equal("http://example.org/ns#y", selectQueryResult.SelectResults.Rows[0]["?V"]);
         }
 
-        // Not possible to build a litteral : "abc"^^<http://example.org/datatype#specialDatatype>
+        
 
         /// <summary>
         /// 2.3 Matching RDF Literals
@@ -367,7 +384,8 @@ WHERE {
         [Fact]
         public void MatchingLiteralsWithArbitraryDatatypes()
         {
-            RDFGraph graph = RDFGraph.FromFile(RDFModelEnums.RDFFormats.Turtle, @"C:\Users\philippel\Documents\GitHub\RDFSharp\RDFSharpTests\Files\Test4.ttl");
+            string filePath = GetPath(@"Files\Test4.ttl");
+            RDFGraph graph = RDFGraph.FromFile(RDFModelEnums.RDFFormats.Turtle, filePath);
 
             // SELECT ?v WHERE { ?v ?p "abc"^^<http://example.org/datatype#specialDatatype> }
 
@@ -387,7 +405,9 @@ WHERE {
             RDFSelectQueryResult selectQueryResult = selectQuery.ApplyToGraph(graph);
 
             // EXPORT SELECT QUERY RESULTS TO SPARQL XML FORMAT (FILE)
-            selectQueryResult.ToSparqlXmlResult(@"C:\TEMP\select_results.srq");
+            //selectQueryResult.ToSparqlXmlResult(@"C:\TEMP\MatchingLiteralsWithArbitraryDatatypes.srq");
+
+            // Fails since it is Not possible to build a litteral : "abc"^^<http://example.org/datatype#specialDatatype>
 
             Assert.Equal(1, selectQueryResult.SelectResultsCount);
             Assert.Equal("http://example.org/ns#z", selectQueryResult.SelectResults.Rows[0]["?V"]);
@@ -400,7 +420,8 @@ WHERE {
         [Fact]
         public void BlankNodeLabelsInQueryResults()
         {
-            RDFGraph graph = RDFGraph.FromFile(RDFModelEnums.RDFFormats.Turtle, @"C:\Users\philippel\Documents\GitHub\RDFSharp\RDFSharpTests\Files\Test5.ttl");
+            string filePath = GetPath(@"Files\Test5.ttl");
+            RDFGraph graph = RDFGraph.FromFile(RDFModelEnums.RDFFormats.Turtle, filePath);
 
             /*
 PREFIX foaf:   <http://xmlns.com/foaf/0.1/>
@@ -429,7 +450,7 @@ WHERE  { ?x foaf:name ?name }
             RDFSelectQueryResult selectQueryResult = selectQuery.ApplyToGraph(graph);
 
             // EXPORT SELECT QUERY RESULTS TO SPARQL XML FORMAT (FILE)
-            selectQueryResult.ToSparqlXmlResult(@"C:\TEMP\select_results.srq");
+            //selectQueryResult.ToSparqlXmlResult(@"C:\TEMP\BlankNodeLabelsInQueryResults.srq");
 
             Assert.Equal(2, selectQueryResult.SelectResultsCount);
             Assert.Equal("Alice", selectQueryResult.SelectResults.Rows[0]["?NAME"]);
@@ -438,15 +459,16 @@ WHERE  { ?x foaf:name ?name }
             Assert.Equal("bnode:b", selectQueryResult.SelectResults.Rows[1]["?X"]);
         }
 
-        // Problem can not use concat or bind
-
         /// <summary>
         /// 2.5 Creating Values with Expressions
         /// </summary>
         [Fact]
         public void CreatingValuesWithExpressions()
         {
-            RDFGraph graph = RDFGraph.FromFile(RDFModelEnums.RDFFormats.Turtle, @"C:\Users\philippel\Documents\GitHub\RDFSharp\RDFSharpTests\Files\Test6.ttl");
+            string filePath = GetPath(@"Files\Test6.ttl");
+            RDFGraph graph = RDFGraph.FromFile(RDFModelEnums.RDFFormats.Turtle, filePath);
+
+            // Problem can not use concat or bind
 
             /*
 Query:
@@ -491,7 +513,7 @@ WHERE  {
             RDFSelectQueryResult selectQueryResult = selectQuery.ApplyToGraph(graph);
 
             // EXPORT SELECT QUERY RESULTS TO SPARQL XML FORMAT (FILE)
-            selectQueryResult.ToSparqlXmlResult(@"C:\TEMP\select_results.srq");
+            //selectQueryResult.ToSparqlXmlResult(@"C:\TEMP\CreatingValuesWithExpressions.srq");
 
 
             //Assert.Equal(2, selectQueryResult.SelectResultsCount);
@@ -507,7 +529,8 @@ WHERE  {
         [Fact]
         public void BuildingRdfGraphs()
         {
-            RDFGraph graph = RDFGraph.FromFile(RDFModelEnums.RDFFormats.Turtle, @"C:\Users\philippel\Documents\GitHub\RDFSharp\RDFSharpTests\Files\Test7.ttl");
+            string filePath = GetPath(@"Files\Test7.ttl");
+            RDFGraph graph = RDFGraph.FromFile(RDFModelEnums.RDFFormats.Turtle, filePath);
 
             /*
 PREFIX foaf:   <http://xmlns.com/foaf/0.1/>
@@ -559,7 +582,8 @@ WHERE  { ?x org:employeeName ?name }
         [Fact]
         public void RestrictingTheValueOfString()
         {
-            RDFGraph graph = RDFGraph.FromFile(RDFModelEnums.RDFFormats.Turtle, @"C:\Users\philippel\Documents\GitHub\RDFSharp\RDFSharpTests\Files\Test8.ttl");
+            string filePath = GetPath(@"Files\Test8.ttl");
+            RDFGraph graph = RDFGraph.FromFile(RDFModelEnums.RDFFormats.Turtle, filePath);
 
             /*
              
@@ -640,7 +664,8 @@ WHERE {
         [Fact]
         public void RestrictingNumericValues()
         {
-            RDFGraph graph = RDFGraph.FromFile(RDFModelEnums.RDFFormats.Turtle, @"C:\Users\philippel\Documents\GitHub\RDFSharp\RDFSharpTests\Files\Test8.ttl");
+            string filePath = GetPath(@"Files\Test8.ttl");
+            RDFGraph graph = RDFGraph.FromFile(RDFModelEnums.RDFFormats.Turtle, filePath);
 
             /*
     PREFIX  dc:  <http://purl.org/dc/elements/1.1/>
@@ -712,7 +737,8 @@ WHERE {
         [Fact]
         public void OptionalPatternMatching()
         {
-            RDFGraph graph = RDFGraph.FromFile(RDFModelEnums.RDFFormats.Turtle, @"C:\Users\philippel\Documents\GitHub\RDFSharp\RDFSharpTests\Files\Test9.ttl");
+            string filePath = GetPath(@"Files\Test9.ttl");
+            RDFGraph graph = RDFGraph.FromFile(RDFModelEnums.RDFFormats.Turtle, filePath);
 
             /*
 PREFIX foaf: <http://xmlns.com/foaf/0.1/>
@@ -773,7 +799,8 @@ WHERE  { ?x foaf:name  ?name .
         [Fact]
         public void ConstraintsInOptionalPatternMatching()
         {
-            RDFGraph graph = RDFGraph.FromFile(RDFModelEnums.RDFFormats.Turtle, @"C:\Users\philippel\Documents\GitHub\RDFSharp\RDFSharpTests\Files\Test10.ttl");
+            string filePath = GetPath(@"Files\Test10.ttl");
+            RDFGraph graph = RDFGraph.FromFile(RDFModelEnums.RDFFormats.Turtle, filePath);
 
             /*
 PREFIX  dc:  <http://purl.org/dc/elements/1.1/>
@@ -847,7 +874,8 @@ WHERE {
         [Fact]
         public void MultipleOptionalGraphPatterns()
         {
-            RDFGraph graph = RDFGraph.FromFile(RDFModelEnums.RDFFormats.Turtle, @"C:\Users\philippel\Documents\GitHub\RDFSharp\RDFSharpTests\Files\Test11.ttl");
+            string filePath = GetPath(@"Files\Test11.ttl");
+            RDFGraph graph = RDFGraph.FromFile(RDFModelEnums.RDFFormats.Turtle, filePath);
 
             /*
 PREFIX foaf: <http://xmlns.com/foaf/0.1/>
@@ -942,7 +970,8 @@ WHERE {
             RDFNamespaceRegister.AddNamespace(dc10Ns);
             RDFNamespaceRegister.AddNamespace(dc11Ns);
 
-            RDFGraph graph = RDFGraph.FromFile(RDFModelEnums.RDFFormats.Turtle, @"C:\Users\philippel\Documents\GitHub\RDFSharp\RDFSharpTests\Files\Test12.ttl");
+            string filePath = GetPath(@"Files\Test12.ttl");
+            RDFGraph graph = RDFGraph.FromFile(RDFModelEnums.RDFFormats.Turtle, filePath);
 
             // **** Problem parsing the file *****
             // we get node with predicate : {https://rdfsharp.codeplex.com/title}
@@ -1021,7 +1050,8 @@ WHERE {
             // **** Tweak to force the good loading with predicate http://purl.org/dc/elements/1.1/
             RDFNamespaceRegister.SetDefaultNamespace(dcNs);
 
-            RDFGraph graph = RDFGraph.FromFile(RDFModelEnums.RDFFormats.Turtle, @"C:\Users\philippel\Documents\GitHub\RDFSharp\RDFSharpTests\Files\Test12.ttl");
+            string filePath = GetPath(@"Files\Test12.ttl");
+            RDFGraph graph = RDFGraph.FromFile(RDFModelEnums.RDFFormats.Turtle, filePath);
 
             Assert.Equal(6, graph.TriplesCount);
 
@@ -1090,7 +1120,8 @@ WHERE {
             // **** Tweak to force the good loading with predicate http://purl.org/dc/elements/1.1/
             RDFNamespaceRegister.SetDefaultNamespace(dcNs);
 
-            RDFGraph graph = RDFGraph.FromFile(RDFModelEnums.RDFFormats.Turtle, @"C:\Users\philippel\Documents\GitHub\RDFSharp\RDFSharpTests\Files\Test12.ttl");
+            string filePath = GetPath(@"Files\Test12.ttl");
+            RDFGraph graph = RDFGraph.FromFile(RDFModelEnums.RDFFormats.Turtle, filePath);
 
             Assert.Equal(6, graph.TriplesCount);
 
@@ -1155,7 +1186,8 @@ WHERE {
             // **** Tweak to force the good loading with predicate http://purl.org/dc/elements/1.1/
             RDFNamespaceRegister.SetDefaultNamespace(dcNs);
 
-            RDFGraph graph = RDFGraph.FromFile(RDFModelEnums.RDFFormats.Turtle, @"C:\Users\philippel\Documents\GitHub\RDFSharp\RDFSharpTests\Files\Test12.ttl");
+            string filePath = GetPath(@"Files\Test12.ttl");
+            RDFGraph graph = RDFGraph.FromFile(RDFModelEnums.RDFFormats.Turtle, filePath);
 
             Assert.Equal(6, graph.TriplesCount);
 
