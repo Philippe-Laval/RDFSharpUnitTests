@@ -1672,14 +1672,160 @@ SELECT *
         // 9.1 Property Path Syntax
         // 9.2 Examples
         [Fact]
-        public void PropertyPathSyntax()
+        public void PropertyPathSyntax_Alternatives_Test1()
         {
-            // { :book1 dc:title|rdfs:label ?displayString }
+            /*
+Alternatives: Match one or both possibilities
+{ :book1 dc:title|rdfs:label ?displayString }
+which could have writen:
+{ :book1 <http://purl.org/dc/elements/1.1/title> | <http://www.w3.org/2000/01/rdf-schema#label> ?displayString }
+             */
 
+            // CREATE NAMESPACE
+            var exNs = new RDFNamespace("ex", "http://example.org/book/");
+            RDFNamespaceRegister.AddNamespace(exNs);
+
+            RDFNamespaceRegister.SetDefaultNamespace(exNs);
+
+            string filePath = GetPath(@"Files\Test17.ttl");
+            RDFGraph graph = RDFGraph.FromFile(RDFModelEnums.RDFFormats.Turtle, filePath);
+
+            Assert.Equal(2, graph.TriplesCount);
+
+            var displayString = new RDFVariable("displayString");
+
+            // { :book1 dc:title|rdfs:label ?displayString }
+            // start => :book1
+            // end => ?displayString
+
+            // {<http://example.org/book/book1>  ?DISPLAYSTRING}
+            var variablePropPath = new RDFPropertyPath(new RDFResource(exNs + "book1"), displayString);
+
+            // dc:title|rdfs:label
+            var altSteps = new List<RDFPropertyPathStep>();
+            altSteps.Add(new RDFPropertyPathStep(RDFVocabulary.DC.TITLE));
+            altSteps.Add(new RDFPropertyPathStep(RDFVocabulary.RDFS.LABEL));
+
+            // {<http://example.org/book/book1> (<http://purl.org/dc/elements/1.1/title>|<http://www.w3.org/2000/01/rdf-schema#label>) ?DISPLAYSTRING}
+            variablePropPath.AddAlternativeSteps(altSteps);
+
+            // Select query
+            RDFSelectQuery selectQuery = new RDFSelectQuery()
+                .AddPrefix(exNs)
+                .AddPatternGroup(new RDFPatternGroup("PG1")
+                    .AddPropertyPath(variablePropPath))
+                .AddProjectionVariable(displayString);
+
+            #region generated sparql query
+            /*
+PREFIX ex: <http://example.org/book/>
+
+SELECT ?DISPLAYSTRING
+WHERE {
+  {
+    ex:book1 (<http://purl.org/dc/elements/1.1/title>|<http://www.w3.org/2000/01/rdf-schema#label>) ?DISPLAYSTRING .
+  }
+}
+            */
+            string sparqlCommand = selectQuery.ToString();
+            #endregion
+
+            // APPLY SELECT QUERY TO GRAPH
+            RDFSelectQueryResult selectQueryResult = selectQuery.ApplyToGraph(graph);
+
+            Assert.Equal(1, selectQueryResult.SelectResultsCount);
+
+            Assert.Equal("the book1", selectQueryResult.SelectResults.Rows[0]["?DISPLAYSTRING"]);
         }
 
+        [Fact]
+        public void PropertyPathSyntax_Alternatives_Test2()
+        {
+            /*
+Alternatives: Match one or both possibilities
+{ ?book dc:title|rdfs:label ?displayString }
+which could have writen:
+{ ?book <http://purl.org/dc/elements/1.1/title> | <http://www.w3.org/2000/01/rdf-schema#label> ?displayString }
+             */
 
+            // CREATE NAMESPACE
+            var exNs = new RDFNamespace("ex", "http://example.org/book/");
+            RDFNamespaceRegister.AddNamespace(exNs);
 
+            RDFNamespaceRegister.SetDefaultNamespace(exNs);
+
+            string filePath = GetPath(@"Files\Test17.ttl");
+            RDFGraph graph = RDFGraph.FromFile(RDFModelEnums.RDFFormats.Turtle, filePath);
+
+            Assert.Equal(2, graph.TriplesCount);
+
+            var book = new RDFVariable("book");
+            var displayString = new RDFVariable("displayString");
+
+            // { ?book dc:title|rdfs:label ?displayString }
+            // start => ?book
+            // end => ?displayString
+
+            // {?BOOK ?DISPLAYSTRING}
+            var variablePropPath = new RDFPropertyPath(book, displayString);
+
+            // dc:title|rdfs:label
+            var altSteps = new List<RDFPropertyPathStep>();
+            altSteps.Add(new RDFPropertyPathStep(RDFVocabulary.DC.TITLE));
+            altSteps.Add(new RDFPropertyPathStep(RDFVocabulary.RDFS.LABEL));
+
+            // {?BOOK (<http://purl.org/dc/elements/1.1/title>|<http://www.w3.org/2000/01/rdf-schema#label>) ?DISPLAYSTRING}
+            variablePropPath.AddAlternativeSteps(altSteps);
+
+            // Select query
+            RDFSelectQuery selectQuery = new RDFSelectQuery()
+                .AddPrefix(exNs)
+                .AddPatternGroup(new RDFPatternGroup("PG1")
+                    .AddPropertyPath(variablePropPath))
+                .AddProjectionVariable(book)
+                .AddProjectionVariable(displayString);
+
+            #region generated sparql query
+            /*
+PREFIX ex: <http://example.org/book/>
+
+SELECT ?BOOK ?DISPLAYSTRING
+WHERE {
+  {
+    ?BOOK (<http://purl.org/dc/elements/1.1/title>|<http://www.w3.org/2000/01/rdf-schema#label>) ?DISPLAYSTRING .
+  }
+}
+            */
+            string sparqlCommand = selectQuery.ToString();
+            #endregion
+
+            // APPLY SELECT QUERY TO GRAPH
+            RDFSelectQueryResult selectQueryResult = selectQuery.ApplyToGraph(graph);
+
+            Assert.Equal(2, selectQueryResult.SelectResultsCount);
+
+            var book1 = selectQueryResult.SelectResults.Rows[0]["?BOOK"].ToString();
+            var book2 = selectQueryResult.SelectResults.Rows[1]["?BOOK"].ToString();
+            var dp1 = selectQueryResult.SelectResults.Rows[0]["?DISPLAYSTRING"].ToString();
+            var dp2 = selectQueryResult.SelectResults.Rows[1]["?DISPLAYSTRING"].ToString();
+
+            if (book1 == "book1")
+            {
+                Assert.Equal("book2", book2);
+                Assert.Equal("the book2", dp2);
+
+                Assert.Equal("the book1", dp1);
+            }
+            else
+            {
+                Assert.Equal("http://example.org/book/book2", book1);
+                Assert.Equal("the book2", dp1);
+
+                Assert.Equal("http://example.org/book/book1", book2);
+                Assert.Equal("the book1", dp2);
+            }
+        }
+
+        
     }
-
 }
