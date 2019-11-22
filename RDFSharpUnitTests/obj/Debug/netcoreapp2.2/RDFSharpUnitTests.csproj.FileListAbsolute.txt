@@ -24,3 +24,7 @@ C:\Users\philippel\Documents\GitHub\RDFSharpUnitTests\RDFSharpUnitTests\bin\Debu
 C:\Users\philippel\Documents\GitHub\RDFSharpUnitTests\RDFSharpUnitTests\bin\Debug\netcoreapp2.2\Files\Test7.ttl
 C:\Users\philippel\Documents\GitHub\RDFSharpUnitTests\RDFSharpUnitTests\bin\Debug\netcoreapp2.2\Files\Test8.ttl
 C:\Users\philippel\Documents\GitHub\RDFSharpUnitTests\RDFSharpUnitTests\bin\Debug\netcoreapp2.2\Files\Test9.ttl
+C:\Users\philippel\Documents\GitHub\RDFSharpUnitTests\RDFSharpUnitTests\bin\Debug\netcoreapp2.2\Files\Test13.ttl
+C:\Users\philippel\Documents\GitHub\RDFSharpUnitTests\RDFSharpUnitTests\bin\Debug\netcoreapp2.2\Files\Test14.ttl
+C:\Users\philippel\Documents\GitHub\RDFSharpUnitTests\RDFSharpUnitTests\bin\Debug\netcoreapp2.2\Files\Test15.ttl
+C:\Users\philippel\Documents\GitHub\RDFSharpUnitTests\RDFSharpUnitTests\bin\Debug\netcoreapp2.2\Files\Test16.ttl

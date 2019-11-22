@@ -28,7 +28,7 @@ namespace RDFSharpTests.StoreTests
         [Fact]
         public static void CreatingInvalidContextTest()
         {
-            Assert.Throws<RDFStoreException>( () => new RDFContext("not a uri"));
+            Assert.Throws<RDFStoreException>(() => new RDFContext("not a uri"));
         }
     }
 }

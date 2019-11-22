@@ -8,11 +8,11 @@ using System.Text;
 using System.Text.RegularExpressions;
 using Xunit;
 
-// https://www.w3.org/TR/2013/REC-sparql11-query-20130321/
+// Try to reproduce the example in the document :https://www.w3.org/TR/2013/REC-sparql11-query-20130321/
 
 namespace RDFSharpTests.QueryTests
 {
-    public class Tutorial2Sparql
+    public class SparqlQueryTests
     {
         private string GetPath(string relativePath)
         {
@@ -375,7 +375,7 @@ WHERE {
             Assert.Equal("http://example.org/ns#y", selectQueryResult.SelectResults.Rows[0]["?V"]);
         }
 
-        
+
 
         /// <summary>
         /// 2.3 Matching RDF Literals
@@ -1254,6 +1254,432 @@ WHERE {
             Assert.Equal("Alice", selectQueryResult.SelectResults.Rows[1]["?AUTHOR"]);
         }
 
+        /// <summary>
+        /// 8 Negation
+        /// 8.1 Filtering Using Graph Patterns
+        /// 8.1.1 Testing For the Absence of a Pattern
+        /// </summary>
+        [Fact]
+        public void TestingForTheAbsenceOfPattern()
+        {
+            // CREATE NAMESPACE
+            var exNs = new RDFNamespace("ex", "http://example/");
+            RDFNamespaceRegister.AddNamespace(exNs);
+
+            RDFNamespaceRegister.SetDefaultNamespace(exNs);
+
+            string filePath = GetPath(@"Files\Test13.ttl");
+            RDFGraph graph = RDFGraph.FromFile(RDFModelEnums.RDFFormats.Turtle, filePath);
+
+            Assert.Equal(3, graph.TriplesCount);
+
+            /*
+PREFIX  rdf:    <http://www.w3.org/1999/02/22-rdf-syntax-ns#> 
+PREFIX  foaf:   <http://xmlns.com/foaf/0.1/> 
+
+SELECT ?person
+WHERE 
+{
+    ?person rdf:type  foaf:Person .
+    FILTER NOT EXISTS { ?person foaf:name ?name }
+}      
+             */
+
+            var rdfNs = RDFNamespaceRegister.GetByPrefix("rdf");
+            var foafNs = RDFNamespaceRegister.GetByPrefix("foaf");
+
+
+            // Create variables
+            var person = new RDFVariable("person");
+            var name = new RDFVariable("name");
+
+            // FILTER NOT EXISTS { ?person foaf:name ?name }
+            var notExistsFilter = new RDFNotExistsFilter(new RDFPattern(person, RDFVocabulary.FOAF.NAME, name));
+
+            // Select query
+            RDFSelectQuery selectQuery = new RDFSelectQuery()
+                .AddPrefix(rdfNs)
+                .AddPrefix(foafNs)
+                .AddPatternGroup(new RDFPatternGroup("PG1")
+                    .AddPattern(new RDFPattern(person, RDFVocabulary.RDF.TYPE, RDFVocabulary.FOAF.PERSON))
+                    .AddFilter(notExistsFilter))
+                .AddProjectionVariable(person);
+
+
+            #region generated sparql query
+            /*
+PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX foaf: <http://xmlns.com/foaf/0.1/>
+
+SELECT ?PERSON
+WHERE {
+  {
+    ?PERSON rdf:type foaf:Person .
+    FILTER ( NOT EXISTS { ?PERSON foaf:name ?NAME } ) 
+  }
+}
+            */
+            string sparqlCommand = selectQuery.ToString();
+            #endregion
+
+            // APPLY SELECT QUERY TO GRAPH
+            RDFSelectQueryResult selectQueryResult = selectQuery.ApplyToGraph(graph);
+
+            Assert.Equal(1, selectQueryResult.SelectResultsCount);
+
+            Assert.Equal("http://example/bob", selectQueryResult.SelectResults.Rows[0]["?PERSON"]);
+        }
+
+        /// <summary>
+        /// 8.1.2 Testing For the Presence of a Pattern
+        /// </summary>
+        [Fact]
+        public void TestingForThePresenceOfPattern()
+        {
+            // CREATE NAMESPACE
+            var exNs = new RDFNamespace("ex", "http://example/");
+            RDFNamespaceRegister.AddNamespace(exNs);
+
+            RDFNamespaceRegister.SetDefaultNamespace(exNs);
+
+            string filePath = GetPath(@"Files\Test13.ttl");
+            RDFGraph graph = RDFGraph.FromFile(RDFModelEnums.RDFFormats.Turtle, filePath);
+
+            Assert.Equal(3, graph.TriplesCount);
+
+            /*
+PREFIX  rdf:    <http://www.w3.org/1999/02/22-rdf-syntax-ns#> 
+PREFIX  foaf:   <http://xmlns.com/foaf/0.1/> 
+
+SELECT ?person
+WHERE 
+{
+    ?person rdf:type  foaf:Person .
+    FILTER EXISTS { ?person foaf:name ?name }
+}     
+             */
+
+            var rdfNs = RDFNamespaceRegister.GetByPrefix("rdf");
+            var foafNs = RDFNamespaceRegister.GetByPrefix("foaf");
+
+
+            // Create variables
+            var person = new RDFVariable("person");
+            var name = new RDFVariable("name");
+
+            // FILTER NOT EXISTS { ?person foaf:name ?name }
+            var notExistsFilter = new RDFExistsFilter(new RDFPattern(person, RDFVocabulary.FOAF.NAME, name));
+
+            // Select query
+            RDFSelectQuery selectQuery = new RDFSelectQuery()
+                .AddPrefix(rdfNs)
+                .AddPrefix(foafNs)
+                .AddPatternGroup(new RDFPatternGroup("PG1")
+                    .AddPattern(new RDFPattern(person, RDFVocabulary.RDF.TYPE, RDFVocabulary.FOAF.PERSON))
+                    .AddFilter(notExistsFilter))
+                .AddProjectionVariable(person);
+
+
+            #region generated sparql query
+            /*
+PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX foaf: <http://xmlns.com/foaf/0.1/>
+
+SELECT ?PERSON
+WHERE {
+  {
+    ?PERSON rdf:type foaf:Person .
+    FILTER ( EXISTS { ?PERSON foaf:name ?NAME } ) 
+  }
+}
+            */
+            string sparqlCommand = selectQuery.ToString();
+            #endregion
+
+            // APPLY SELECT QUERY TO GRAPH
+            RDFSelectQueryResult selectQueryResult = selectQuery.ApplyToGraph(graph);
+
+            Assert.Equal(1, selectQueryResult.SelectResultsCount);
+
+            Assert.Equal("http://example/alice", selectQueryResult.SelectResults.Rows[0]["?PERSON"]);
+        }
+
+        // 8.2 Removing Possible Solutions
+
+        [Fact]
+        public void RemovingPossibleSolutions()
+        {
+            string filePath = GetPath(@"Files\Test14.ttl");
+            RDFGraph graph = RDFGraph.FromFile(RDFModelEnums.RDFFormats.Turtle, filePath);
+
+            Assert.Equal(6, graph.TriplesCount);
+
+            // NOT Implemented
+            Assert.True(false);
+        }
+
+        // 8.3 Relationship and differences between NOT EXISTS and MINUS
+        // 8.3.1 Example: Sharing of variables
+
+        [Fact]
+        public void SharingOfVariablesFILTER_NOT_EXISTS()
+        {
+            string filePath = GetPath(@"Files\Test15.ttl");
+            RDFGraph graph = RDFGraph.FromFile(RDFModelEnums.RDFFormats.Turtle, filePath);
+
+            Assert.Equal(1, graph.TriplesCount);
+
+            /*
+SELECT *
+{ 
+  ?s ?p ?o
+  FILTER NOT EXISTS { ?x ?y ?z }
+}             
+             */
+
+            // Create variables
+            var s = new RDFVariable("s");
+            var p = new RDFVariable("p");
+            var o = new RDFVariable("o");
+            var x = new RDFVariable("x");
+            var y = new RDFVariable("y");
+            var z = new RDFVariable("z");
+
+            // FILTER ( NOT EXISTS { ?X ?X ?Z } ) 
+            var notExistsFilter = new RDFNotExistsFilter(new RDFPattern(x, x, z));
+
+            // Select query
+            RDFSelectQuery selectQuery = new RDFSelectQuery()
+                .AddPatternGroup(new RDFPatternGroup("PG1")
+                    .AddPattern(new RDFPattern(s, p, o))
+                    .AddFilter(notExistsFilter));
+            // Note : Adding no projection variable => SELECT *
+
+            #region generated sparql query
+            /*
+SELECT *
+WHERE {
+  {
+    ?S ?P ?O .
+    FILTER ( NOT EXISTS { ?X ?X ?Z } ) 
+  }
+}
+
+            */
+            string sparqlCommand = selectQuery.ToString();
+            #endregion
+
+            // APPLY SELECT QUERY TO GRAPH
+            RDFSelectQueryResult selectQueryResult = selectQuery.ApplyToGraph(graph);
+
+            if (selectQueryResult.SelectResultsCount == 1)
+            {
+                // Got "http://example/a"
+                var r = selectQueryResult.SelectResults.Rows[0][0];
+            }
+
+            // We should have 0 but get 1
+            Assert.Equal(0, selectQueryResult.SelectResultsCount);
+        }
+
+        [Fact]
+        public void SharingOfVariablesMINUS()
+        {
+            string filePath = GetPath(@"Files\Test15.ttl");
+            RDFGraph graph = RDFGraph.FromFile(RDFModelEnums.RDFFormats.Turtle, filePath);
+
+            Assert.Equal(1, graph.TriplesCount);
+
+            /*
+SELECT *
+{ 
+   ?s ?p ?o 
+   MINUS 
+     { ?x ?y ?z }
+}             
+             */
+
+            // NOT Implemented
+            Assert.True(false);
+        }
+
+        // 8.3.2 Example: Fixed pattern
+
+        [Fact]
+        public void FixedPatternFILTER_NOT_EXISTS()
+        {
+            // CREATE NAMESPACE
+            var exNs = new RDFNamespace("ex", "http://example/");
+            RDFNamespaceRegister.AddNamespace(exNs);
+
+            RDFNamespaceRegister.SetDefaultNamespace(exNs);
+
+            string filePath = GetPath(@"Files\Test15.ttl");
+            RDFGraph graph = RDFGraph.FromFile(RDFModelEnums.RDFFormats.Turtle, filePath);
+
+            Assert.Equal(1, graph.TriplesCount);
+
+            /*
+    PREFIX : <http://example/>
+    SELECT * 
+    { 
+      ?s ?p ?o 
+      FILTER NOT EXISTS { :a :b :c }
+    }         
+             */
+
+            // Create variables
+            var s = new RDFVariable("s");
+            var p = new RDFVariable("p");
+            var o = new RDFVariable("o");
+
+            // FILTER NOT EXISTS { :a :b :c }
+            var notExistsFilter = new RDFNotExistsFilter(new RDFPattern(new RDFResource(exNs + "a"), new RDFResource(exNs + "b"), new RDFResource(exNs + "c")));
+
+            // Select query
+            RDFSelectQuery selectQuery = new RDFSelectQuery()
+                .AddPrefix(exNs)
+                .AddPatternGroup(new RDFPatternGroup("PG1")
+                    .AddPattern(new RDFPattern(s, p, o))
+                    .AddFilter(notExistsFilter));
+
+            #region generated sparql query
+            /*
+SELECT *
+WHERE {
+  {
+    ?S ?P ?O .
+    FILTER ( NOT EXISTS { ?X ?X ?Z } ) 
+  }
+}
+
+            */
+            string sparqlCommand = selectQuery.ToString();
+            #endregion
+
+            // APPLY SELECT QUERY TO GRAPH
+            RDFSelectQueryResult selectQueryResult = selectQuery.ApplyToGraph(graph);
+
+            if (selectQueryResult.SelectResultsCount == 1)
+            {
+                // Got "http://example/a"
+                var r = selectQueryResult.SelectResults.Rows[0][0];
+            }
+
+            // We should have 0 but get 1
+            Assert.Equal(0, selectQueryResult.SelectResultsCount);
+
+        }
+
+        [Fact]
+        public void FixedPatternFILTER_MINUS()
+        {
+            string filePath = GetPath(@"Files\Test15.ttl");
+            RDFGraph graph = RDFGraph.FromFile(RDFModelEnums.RDFFormats.Turtle, filePath);
+
+            /*
+PREFIX : <http://example/>
+SELECT * 
+{ 
+  ?s ?p ?o 
+  MINUS { :a :b :c }
+}             
+             */
+
+            Assert.Equal(1, graph.TriplesCount);
+
+            // NOT Implemented
+            Assert.True(false);
+        }
+
+        /// <summary>
+        /// 8.3.3 Example: Inner FILTERs
+        /// </summary>
+        [Fact]
+        public void InnerFILTERs__FILTER_NOT_EXISTS_FILTER()
+        {
+            // CREATE NAMESPACE
+            var exNs = new RDFNamespace("ex", "http://example/");
+            RDFNamespaceRegister.AddNamespace(exNs);
+
+            RDFNamespaceRegister.SetDefaultNamespace(exNs);
+
+            string filePath = GetPath(@"Files\Test16.ttl");
+            RDFGraph graph = RDFGraph.FromFile(RDFModelEnums.RDFFormats.Turtle, filePath);
+
+            Assert.Equal(6, graph.TriplesCount);
+
+            /*
+            PREFIX : <http://example.com/>
+            SELECT * WHERE {
+                    ?x :p ?n
+                    FILTER NOT EXISTS {
+                            ?x :q ?m .
+                            FILTER(?n = ?m)
+                    }
+            } 
+            */
+
+
+            var x = new RDFVariable("x");
+            var n = new RDFVariable("n");
+            var m = new RDFVariable("m");
+
+            // ?x :q ?m
+            var pattern = new RDFPattern(x, new RDFResource(exNs + "q"), m);
+
+            // {FILTER ( SAMETERM(?N, ?M) )}
+            var sameTermFilter = new RDFSameTermFilter(n, m);
+
+            // {  {
+            // ?X < http://example/q> ?M .
+            // FILTER(SAMETERM(?N, ? M))
+            //}
+            //}
+            RDFPatternGroup pg2 = new RDFPatternGroup("PG2").AddPattern(pattern).AddFilter(sameTermFilter);
+
+            // Select query
+            RDFSelectQuery selectQuery = new RDFSelectQuery()
+                .AddPrefix(exNs)
+                .AddPatternGroup(new RDFPatternGroup("PG1")
+                    .AddPattern(new RDFPattern(x, new RDFResource(exNs + "p"), n)));
+
+            #region generated sparql query
+            /*
+
+            */
+            string sparqlCommand = selectQuery.ToString();
+            #endregion
+
+            // APPLY SELECT QUERY TO GRAPH
+            RDFSelectQueryResult selectQueryResult = selectQuery.ApplyToGraph(graph);
+
+            // NOT possible to build the query
+            Assert.True(false);
+        }
+
+        /// <summary>
+        /// 8.3.3 Example: Inner FILTERs
+        /// </summary>
+        [Fact]
+        public void InnerFILTERs__MINUS_FILTER()
+        {
+            // NOT possible to build the query
+            Assert.True(false);
+        }
+
+        // 9 Property Paths
+        // 9.1 Property Path Syntax
+        // 9.2 Examples
+        [Fact]
+        public void PropertyPathSyntax()
+        {
+            // { :book1 dc:title|rdfs:label ?displayString }
+
+        }
+
+
 
     }
+
 }

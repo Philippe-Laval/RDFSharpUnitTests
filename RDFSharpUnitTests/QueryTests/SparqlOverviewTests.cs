@@ -11,7 +11,7 @@ using Xunit;
 
 namespace RDFSharpTests.QueryTests
 {
-    public class TutorialSparql
+    public class SparqlOverviewTests
     {
         private string GetPath(string relativePath)
         {
@@ -220,6 +220,7 @@ WHERE {
 
             var sparqlCommand = selectQuery.ToString();
 
+            #region Target query in the SPARQL 1.1 documentation
             /*
              * Target query in the document
              * 
@@ -230,7 +231,9 @@ WHERE {
               ?person foaf:knows ?friend . 
           } GROUP BY ?person ?name
           */
+            #endregion
 
+            #region Managed to build this command
             /*
 PREFIX foaf: <http://xmlns.com/foaf/0.1/>
 
@@ -243,7 +246,9 @@ WHERE {
 }
 GROUP BY ?NAME             
              */
+            #endregion
 
+            #region Managed to build this command
             /*
              * Managed to build this command
              
@@ -258,7 +263,7 @@ WHERE {
 }
 GROUP BY ?PERSON ?NAME
              */
-
+            #endregion
 
             // APPLY SELECT QUERY TO GRAPH
             RDFSelectQueryResult selectQueryResult = selectQuery.ApplyToGraph(graph);
@@ -266,6 +271,7 @@ GROUP BY ?PERSON ?NAME
             // EXPORT SELECT QUERY RESULTS TO SPARQL XML FORMAT (FILE)
             //selectQueryResult.ToSparqlXmlResult(@"C:\TEMP\Test2.srq");
 
+            #region Got result
             /*
              * Got result
               
@@ -304,10 +310,11 @@ GROUP BY ?PERSON ?NAME
 </sparql>             
  
              */
+            #endregion
 
-
+            #region Got result
             /*
-             *  Got result
+             *  
              
 <?xml version="1.0" encoding="utf-8"?>
 <sparql xmlns="http://www.w3.org/2005/sparql-results#">
@@ -354,7 +361,9 @@ GROUP BY ?PERSON ?NAME
 </sparql>             
 
              */
+            #endregion
 
+            #region Target result from SPARQL 1.1 documentation
             /*
              * Target result
              * 3 Different query results formats supported by SPARQL 1.1 (XML, JSON, CSV, TSV)
@@ -393,9 +402,9 @@ GROUP BY ?PERSON ?NAME
  </results>
 </sparql>             
              */
+            #endregion
 
             Assert.Equal(3, selectQueryResult.SelectResultsCount);
-
         }
 
     }
