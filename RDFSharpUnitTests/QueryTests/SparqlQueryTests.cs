@@ -2238,8 +2238,364 @@ WHERE {
             Assert.Equal("http://example.org/snoopy", selectQueryResult.SelectResults.Rows[3]["?Y"]);
         }
 
+        [Fact]
+        public void PropertyPath_star_plus_NotAvailable()
+        {
+            /*
+    Arbitrary length match: Find the names of all the people that can be reached from Alice by foaf:knows:
+
+      {
+        ?x foaf:mbox <mailto:alice@example> .
+        ?x foaf:knows+/foaf:name ?name .
+      }
+             */
+
+            /*
+             Alternatives in an arbitrary length path:
+
+              { ?ancestor (ex:motherOf|ex:fatherOf)+ <#me> }
+
+            Arbitrary length path match: Some forms of limited inference are possible as well. For example, for RDFS, all types and supertypes of a resource:
+
+              { <http://example/thing> rdf:type/rdfs:subClassOf* ?type }
+
+            All resources and all their inferred types:
+
+              { ?x rdf:type/rdfs:subClassOf* ?type }
+
+            Subproperty:
+
+              { ?x ?p ?v . ?p rdfs:subPropertyOf* :property }
+
+            Negated Property Paths: Find nodes connected but not by rdf:type (either way round):
+
+              { ?x !(rdf:type|^rdf:type) ?y }
+            */
+
+            // PropertyPathNotAvailable : +, * or ?
+            Assert.True(false);
+        }
+
+        #region  9.3 Property Paths and Equivalent Patterns
 
 
+        [Fact]
+        public void PropertyPathsAndEquivalentPatterns_Test1()
+        {
+            // CREATE NAMESPACE
+            var exNs = new RDFNamespace("ex", "http://example/");
+            RDFNamespaceRegister.AddNamespace(exNs);
+
+            RDFNamespaceRegister.SetDefaultNamespace(exNs);
+
+            /*
+         Query:
+
+PREFIX :   <http://example/>
+SELECT * 
+{  ?s :item/:price ?x . }
+            */
+
+            string filePath = GetPath(@"Files\Test19.ttl");
+            RDFGraph graph = RDFGraph.FromFile(RDFModelEnums.RDFFormats.Turtle, filePath);
+
+            Assert.Equal(6, graph.TriplesCount);
+
+            var s = new RDFVariable("s");
+            var x = new RDFVariable("x");
+
+            // ?s :item/:price ?x
+            var variablePropPath = new RDFPropertyPath(s, x)
+                .AddSequenceStep(new RDFPropertyPathStep(new RDFResource(exNs + "item")))
+                .AddSequenceStep(new RDFPropertyPathStep(new RDFResource(exNs + "price")));
+
+            // Select query
+            RDFSelectQuery selectQuery = new RDFSelectQuery()
+                .AddPrefix(exNs)
+                .AddPatternGroup(new RDFPatternGroup("PG1")
+                    .AddPropertyPath(variablePropPath));
+
+            #region generated sparql query
+            /*
+PREFIX ex: <http://example/>
+
+SELECT *
+WHERE {
+  {
+    ?S ex:item/ex:price ?X .
+  }
+}
+            */
+            string sparqlCommand = selectQuery.ToString();
+            #endregion
+
+            // APPLY SELECT QUERY TO GRAPH
+            RDFSelectQueryResult selectQueryResult = selectQuery.ApplyToGraph(graph);
+
+            Assert.Equal(2, selectQueryResult.SelectResultsCount);
+
+            Assert.Equal("http://example/order", selectQueryResult.SelectResults.Rows[0]["?S"]);
+            Assert.Equal("5^^http://www.w3.org/2001/XMLSchema#integer", selectQueryResult.SelectResults.Rows[0]["?X"]);
+
+            Assert.Equal("http://example/order", selectQueryResult.SelectResults.Rows[1]["?S"]);
+            Assert.Equal("5^^http://www.w3.org/2001/XMLSchema#integer", selectQueryResult.SelectResults.Rows[1]["?X"]);
+
+        }
+
+        [Fact]
+        public void PropertyPathsAndEquivalentPatterns_Test2()
+        {
+            // CREATE NAMESPACE
+            var exNs = new RDFNamespace("ex", "http://example/");
+            RDFNamespaceRegister.AddNamespace(exNs);
+
+            RDFNamespaceRegister.SetDefaultNamespace(exNs);
+
+            /*
+         PREFIX :   <http://example/>
+SELECT * 
+{  ?s :item ?_a .
+   ?_a :price ?x . }
+            */
+
+            string filePath = GetPath(@"Files\Test19.ttl");
+            RDFGraph graph = RDFGraph.FromFile(RDFModelEnums.RDFFormats.Turtle, filePath);
+
+            Assert.Equal(6, graph.TriplesCount);
+
+            var s = new RDFVariable("s");
+            var x = new RDFVariable("x");
+            var _a = new RDFVariable("_a");
+
+            // Select query
+            RDFSelectQuery selectQuery = new RDFSelectQuery()
+                .AddPrefix(exNs)
+                .AddPatternGroup(new RDFPatternGroup("PG1")
+                    .AddPattern(new RDFPattern(s, new RDFResource(exNs + "item"), _a))
+                    .AddPattern(new RDFPattern(_a, new RDFResource(exNs + "price"), x)));
+
+            #region generated sparql query
+            /*
+PREFIX ex: <http://example/>
+
+SELECT *
+WHERE {
+  {
+    ?S ex:item ?_A .
+    ?_A ex:price ?X .
+  }
+}
+            */
+            string sparqlCommand = selectQuery.ToString();
+            #endregion
+
+            // APPLY SELECT QUERY TO GRAPH
+            RDFSelectQueryResult selectQueryResult = selectQuery.ApplyToGraph(graph);
+
+            Assert.Equal(2, selectQueryResult.SelectResultsCount);
+
+            Assert.Equal("http://example/order", selectQueryResult.SelectResults.Rows[0]["?S"]);
+            Assert.Equal("http://example/z1", selectQueryResult.SelectResults.Rows[0]["?_A"]);
+            Assert.Equal("5^^http://www.w3.org/2001/XMLSchema#integer", selectQueryResult.SelectResults.Rows[0]["?X"]);
+
+            Assert.Equal("http://example/order", selectQueryResult.SelectResults.Rows[1]["?S"]);
+            Assert.Equal("http://example/z2", selectQueryResult.SelectResults.Rows[1]["?_A"]);
+            Assert.Equal("5^^http://www.w3.org/2001/XMLSchema#integer", selectQueryResult.SelectResults.Rows[1]["?X"]);
+
+        }
+
+        [Fact]
+        public void PropertyPathsAndEquivalentPatterns_Test3()
+        {
+            // CREATE NAMESPACE
+            var exNs = new RDFNamespace("ex", "http://example/");
+            RDFNamespaceRegister.AddNamespace(exNs);
+
+            RDFNamespaceRegister.SetDefaultNamespace(exNs);
+
+            /*
+         The equivalance to graphs patterns is particularly significant when query also involves an aggregation operation. The total cost of the order can be found with
+
+  PREFIX :   <http://example/>
+  SELECT (sum(?x) AS ?total)
+  { 
+    :order :item/:price ?x
+  }
+            */
+
+            string filePath = GetPath(@"Files\Test19.ttl");
+            RDFGraph graph = RDFGraph.FromFile(RDFModelEnums.RDFFormats.Turtle, filePath);
+
+            Assert.Equal(6, graph.TriplesCount);
+
+            var x = new RDFVariable("x");
+            var total = new RDFVariable("total");
+
+            // :order :item/:price ?x
+            var variablePropPath = new RDFPropertyPath(new RDFResource(exNs + "order"), x)
+                .AddSequenceStep(new RDFPropertyPathStep(new RDFResource(exNs + "item")))
+                .AddSequenceStep(new RDFPropertyPathStep(new RDFResource(exNs + "price")));
+            
+            var gm = new RDFGroupByModifier(new List<RDFVariable> { x });
+            gm.AddAggregator(new RDFSumAggregator(x, total));
+
+            // Select query
+            RDFSelectQuery selectQuery = new RDFSelectQuery()
+                .AddPrefix(exNs)
+                .AddPatternGroup(new RDFPatternGroup("PG1")
+                    .AddPropertyPath(variablePropPath))
+                .AddModifier(gm)
+                .AddProjectionVariable(total);
+
+            #region generated sparql query
+            /*
+PREFIX ex: <http://example/>
+
+SELECT ?X (SUM(?X) AS ?TOTAL)
+WHERE {
+  {
+    ex:order ex:item/ex:price ?X .
+  }
+}
+GROUP BY ?X
+            */
+            string sparqlCommand = selectQuery.ToString();
+            #endregion
+
+            // APPLY SELECT QUERY TO GRAPH
+            RDFSelectQueryResult selectQueryResult = selectQuery.ApplyToGraph(graph);
+
+            // can not create a (SUM(?X) AS ?TOTAL) without the GROUP BY ?X
+            Assert.True(false);
+        }
+
+        #endregion
+
+        #region 9.4 Arbitrary Length Path Matching
+
+        #endregion
+
+        #region 10 Assignment
+
+        #region 10.1 BIND: Assigning to Variables
+
+        #endregion
+
+        #region 10.2 VALUES: Providing inline data
+
+        #region 10.2.1 VALUES syntax
+        /*
+            VALUES (?x ?y) {
+                (:uri1 1)
+                (:uri2 UNDEF)
+            }
+
+            Optionally, when there is a single variable and some values:
+
+VALUES ?z { "abc" "def" }
+
+which is the same as using the general form:
+
+VALUES (?z) { ("abc") ("def") }
+
+        */
+        #endregion
+
+        #region 10.2.2 VALUES Examples
+
+        [Fact]
+        public void VALUES_Test1()
+        {
+            // CREATE NAMESPACE
+            var exNs = new RDFNamespace("ex", "http://example.org/book/");
+            RDFNamespaceRegister.AddNamespace(exNs);
+
+            var nsNs = new RDFNamespace("ns", "http://example.org/ns#");
+            RDFNamespaceRegister.AddNamespace(exNs);
+        
+            RDFNamespaceRegister.SetDefaultNamespace(exNs);
+
+            string filePath = GetPath(@"Files\Test20.ttl");
+            RDFGraph graph = RDFGraph.FromFile(RDFModelEnums.RDFFormats.Turtle, filePath);
+
+            Assert.Equal(4, graph.TriplesCount);
+
+            /*
+PREFIX dc:   <http://purl.org/dc/elements/1.1/> 
+PREFIX :     <http://example.org/book/> 
+PREFIX ns:   <http://example.org/ns#> 
+
+SELECT ?book ?title ?price
+{
+   VALUES ?book { :book1 :book3 }
+   ?book dc:title ?title ;
+         ns:price ?price .
+} 
+             */
+
+            var book = new RDFVariable("book");
+            var title = new RDFVariable("title");
+            var price = new RDFVariable("price");
+
+            //Declare the following SPARQL values:
+            /*
+            VALUES (?book) {
+            (":book1" ":book3")
+            }
+            */
+
+            // VALUES ?BOOK { ex:book1 ex:book3 }
+            RDFValues myValues = new RDFValues()
+            .AddColumn(new RDFVariable("book"), new List<RDFPatternMember>()
+                {
+                    new RDFResource(exNs + "book1"),
+                    new RDFResource(exNs + "book3")
+                });
+
+            // Select query
+            RDFSelectQuery selectQuery = new RDFSelectQuery()
+                .AddPrefix(exNs)
+                .AddPatternGroup(
+                    new RDFPatternGroup("PG1")
+                        .AddPattern(new RDFPattern(book, RDFVocabulary.DC.TITLE, title))
+                        .AddPattern(new RDFPattern(book, new RDFResource(nsNs + "price"), price))
+                        .AddValues(myValues)
+                    )
+                .AddProjectionVariable(book)
+                .AddProjectionVariable(title)
+                .AddProjectionVariable(price);
+
+            #region generated sparql query
+            /*
+PREFIX ex: <http://example.org/book/>
+
+SELECT ?BOOK ?TITLE ?PRICE
+WHERE {
+  {
+    ?BOOK <http://purl.org/dc/elements/1.1/title> ?TITLE .
+    ?BOOK <http://example.org/ns#price> ?PRICE .
+    VALUES ?BOOK { ex:book1 ex:book3 } .
+  }
+}
+            */
+            string sparqlCommand = selectQuery.ToString();
+            #endregion
+
+            // APPLY SELECT QUERY TO GRAPH
+            RDFSelectQueryResult selectQueryResult = selectQuery.ApplyToGraph(graph);
+
+            Assert.Equal(1, selectQueryResult.SelectResultsCount);
+
+            Assert.Equal("http://example.org/book/book1", selectQueryResult.SelectResults.Rows[0]["?BOOK"]);
+            Assert.Equal("SPARQL Tutorial", selectQueryResult.SelectResults.Rows[0]["?TITLE"]);
+            Assert.Equal("42^^http://www.w3.org/2001/XMLSchema#integer", selectQueryResult.SelectResults.Rows[0]["?PRICE"]);
+        }
+ 
+        #endregion
+
+        #endregion
+
+        #endregion
 
     }
 }
