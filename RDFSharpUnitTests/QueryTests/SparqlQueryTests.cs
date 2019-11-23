@@ -723,6 +723,8 @@ WHERE {
 
             Assert.Equal("The Semantic Web", selectQueryResult.SelectResults.Rows[0][0]);
             var o = selectQueryResult.SelectResults.Rows[0][1];
+
+            // We get
             Assert.Equal("23^^http://www.w3.org/2001/XMLSchema#integer", selectQueryResult.SelectResults.Rows[0][1]);
 
             // Attention on devrait avoir 23
@@ -1414,7 +1416,20 @@ WHERE {
 
             Assert.Equal(6, graph.TriplesCount);
 
-            // NOT Implemented
+            /*
+PREFIX :       <http://example/>
+PREFIX foaf:   <http://xmlns.com/foaf/0.1/>
+
+SELECT DISTINCT ?s
+WHERE {
+   ?s ?p ?o .
+   MINUS {
+      ?s foaf:givenName "Bob" .
+   }
+}
+             */
+
+            // MINUS NOT Implemented
             Assert.True(false);
         }
 
@@ -1499,12 +1514,15 @@ SELECT *
 }             
              */
 
-            // NOT Implemented
+            // MINUS NOT Implemented
             Assert.True(false);
         }
 
         // 8.3.2 Example: Fixed pattern
 
+        /// <summary>
+        /// Not possible to build the filter : FILTER NOT EXISTS { :a :b :c }
+        /// </summary>
         [Fact]
         public void FixedPatternFILTER_NOT_EXISTS()
         {
@@ -1569,6 +1587,7 @@ WHERE {
             // We should have 0 but get 1
             Assert.Equal(0, selectQueryResult.SelectResultsCount);
 
+            // Not possible to build : FILTER NOT EXISTS { :a :b :c }
         }
 
         [Fact]
@@ -1664,6 +1683,17 @@ SELECT *
         [Fact]
         public void InnerFILTERs__MINUS_FILTER()
         {
+            /*
+PREFIX : <http://example.com/>
+SELECT * WHERE {
+        ?x :p ?n
+        FILTER NOT EXISTS {
+                ?x :q ?m .
+                FILTER(?n = ?m)
+        }
+}
+             */
+
             // NOT possible to build the query
             Assert.True(false);
         }
@@ -1826,6 +1856,390 @@ WHERE {
             }
         }
 
+        [Fact]
+        public void PropertyPathSyntax_AddSequenceStep_Test1()
+        {
+            // CREATE NAMESPACE
+            var exNs = new RDFNamespace("ex", "http://example.org/");
+            RDFNamespaceRegister.AddNamespace(exNs);
+
+            RDFNamespaceRegister.SetDefaultNamespace(exNs);
+
+            /*
+             Sequence: Find the name of any people that Alice knows.
+
+  {
+    ?x foaf:mbox <mailto:alice@example.org> .
+    ?x foaf:knows/foaf:name ?name .
+  }
+             */
+
+            string filePath = GetPath(@"Files\Test1.ttl");
+            RDFGraph graph = RDFGraph.FromFile(RDFModelEnums.RDFFormats.Turtle, filePath);
+
+            Assert.Equal(11, graph.TriplesCount);
+
+            var name = new RDFVariable("name");
+            var x = new RDFVariable("x");
+
+           
+            // ?x foaf:knows/foaf:name ?name
+            var variablePropPath = new RDFPropertyPath(x, name)
+                .AddSequenceStep(new RDFPropertyPathStep(RDFVocabulary.FOAF.KNOWS))
+                .AddSequenceStep(new RDFPropertyPathStep(RDFVocabulary.FOAF.NAME));
+
+            // Select query
+            RDFSelectQuery selectQuery = new RDFSelectQuery()
+                .AddPrefix(exNs)
+                .AddPatternGroup(new RDFPatternGroup("PG1")
+                    .AddPattern(new RDFPattern(x, RDFVocabulary.FOAF.MBOX, new RDFResource("mailto:alice@example.org")))
+                    .AddPropertyPath(variablePropPath))
+                .AddProjectionVariable(name);
+
+            #region generated sparql query
+            /*
+PREFIX ex: <http://example.org/>
+
+SELECT ?NAME
+WHERE {
+  {
+    ?X <http://xmlns.com/foaf/0.1/mbox> <mailto:alice@example.org> .
+    ?X <http://xmlns.com/foaf/0.1/knows>/<http://xmlns.com/foaf/0.1/name> ?NAME .
+  }
+}
+            */
+            string sparqlCommand = selectQuery.ToString();
+            #endregion
+
+            // APPLY SELECT QUERY TO GRAPH
+            RDFSelectQueryResult selectQueryResult = selectQuery.ApplyToGraph(graph);
+
+            Assert.Equal(3, selectQueryResult.SelectResultsCount);
+
+            Assert.Equal("Bob", selectQueryResult.SelectResults.Rows[0]["?NAME"]);
+            Assert.Equal("Charlie", selectQueryResult.SelectResults.Rows[1]["?NAME"]);
+            Assert.Equal("Snoopy@EN", selectQueryResult.SelectResults.Rows[2]["?NAME"]);
+        }
+
+        [Fact]
+        public void PropertyPathSyntax_AddSequenceStep_Test2()
+        {
+            // CREATE NAMESPACE
+            var exNs = new RDFNamespace("ex", "http://example.org/");
+            RDFNamespaceRegister.AddNamespace(exNs);
+
+            RDFNamespaceRegister.SetDefaultNamespace(exNs);
+
+            /*
+             Sequence: Find the names of people 2 "foaf:knows" links away.
+
+  { 
+    ?x foaf:mbox <mailto:alice@example> .
+    ?x foaf:knows/foaf:knows/foaf:name ?name .
+  }
+
+This is the same as the SPARQL query:
+
+  SELECT ?x ?name 
+  {
+     ?x  foaf:mbox <mailto:alice@example> .
+     ?x  foaf:knows [ foaf:knows [ foaf:name ?name ]]. 
+  }
+
+or, with explicit variables:
+
+  SELECT ?x ?name
+  {
+    ?x  foaf:mbox <mailto:alice@example> .
+    ?x  foaf:knows ?a1 .
+    ?a1 foaf:knows ?a2 .
+    ?a2 foaf:name ?name .
+  }         
+             */
+
+            string filePath = GetPath(@"Files\Test1.ttl");
+            RDFGraph graph = RDFGraph.FromFile(RDFModelEnums.RDFFormats.Turtle, filePath);
+
+            Assert.Equal(11, graph.TriplesCount);
+
+            var name = new RDFVariable("name");
+            var x = new RDFVariable("x");
+
+
+            // ?x foaf:knows/foaf:knows/foaf:name ?name
+            var variablePropPath = new RDFPropertyPath(x, name)
+                .AddSequenceStep(new RDFPropertyPathStep(RDFVocabulary.FOAF.KNOWS))
+                .AddSequenceStep(new RDFPropertyPathStep(RDFVocabulary.FOAF.KNOWS))
+                .AddSequenceStep(new RDFPropertyPathStep(RDFVocabulary.FOAF.NAME));
+
+            // Select query
+            RDFSelectQuery selectQuery = new RDFSelectQuery()
+                .AddPrefix(exNs)
+                .AddPatternGroup(new RDFPatternGroup("PG1")
+                    .AddPattern(new RDFPattern(x, RDFVocabulary.FOAF.MBOX, new RDFResource("mailto:alice@example.org")))
+                    .AddPropertyPath(variablePropPath))
+                .AddProjectionVariable(name);
+
+            #region generated sparql query
+            /*
+PREFIX ex: <http://example.org/>
+
+SELECT ?NAME
+WHERE {
+  {
+    ?X <http://xmlns.com/foaf/0.1/mbox> <mailto:alice@example.org> .
+    ?X <http://xmlns.com/foaf/0.1/knows>/<http://xmlns.com/foaf/0.1/knows>/<http://xmlns.com/foaf/0.1/name> ?NAME .
+  }
+}
+            */
+            string sparqlCommand = selectQuery.ToString();
+            #endregion
+
+            // APPLY SELECT QUERY TO GRAPH
+            RDFSelectQueryResult selectQueryResult = selectQuery.ApplyToGraph(graph);
+
+            Assert.Equal(2, selectQueryResult.SelectResultsCount);
+
+            Assert.Equal("Alice", selectQueryResult.SelectResults.Rows[0]["?NAME"]);
+            Assert.Equal("Alice", selectQueryResult.SelectResults.Rows[1]["?NAME"]);
+        }
+
+        [Fact]
+        public void PropertyPathSyntax_AddSequenceStep_Test3()
+        {
+            // CREATE NAMESPACE
+            var exNs = new RDFNamespace("ex", "http://example.org/");
+            RDFNamespaceRegister.AddNamespace(exNs);
+
+            RDFNamespaceRegister.SetDefaultNamespace(exNs);
+
+            /*
+        Filtering duplicates: Because someone Alice knows may well know Alice, the example above may include Alice herself. This could be avoided with:
+
+ { ?x foaf:mbox <mailto:alice@example.org> .
+   ?x foaf:knows/foaf:knows ?y .
+   FILTER ( ?x != ?y )
+   ?y foaf:name ?name 
+ }
+        */
+
+            string filePath = GetPath(@"Files\Test18.ttl");
+            RDFGraph graph = RDFGraph.FromFile(RDFModelEnums.RDFFormats.Turtle, filePath);
+
+            Assert.Equal(16, graph.TriplesCount);
+
+            var name = new RDFVariable("name");
+            var x = new RDFVariable("x");
+            var y = new RDFVariable("y");
+
+
+            // ?x foaf:knows/foaf:knows/foaf:name ?y
+            var variablePropPath = new RDFPropertyPath(x, y)
+                .AddSequenceStep(new RDFPropertyPathStep(RDFVocabulary.FOAF.KNOWS))
+                .AddSequenceStep(new RDFPropertyPathStep(RDFVocabulary.FOAF.KNOWS));
+
+            // {FILTER ( ?X != ?Y )}
+            var filter1 = new RDFComparisonFilter(RDFQueryEnums.RDFComparisonFlavors.NotEqualTo, x, y);
+            // FILTER ( !( SAMETERM(?X, ?Y) ) ) 
+            var filter2 = new RDFBooleanNotFilter(new RDFSameTermFilter(x, y));
+
+            // Select query
+            RDFSelectQuery selectQuery = new RDFSelectQuery()
+                .AddPrefix(exNs)
+                .AddPatternGroup(new RDFPatternGroup("PG1")
+                    // ?x foaf:mbox <mailto:alice@example.org>
+                    .AddPattern(new RDFPattern(x, RDFVocabulary.FOAF.MBOX, new RDFResource("mailto:alice@example.org")))
+                    .AddPropertyPath(variablePropPath)
+                    // FILTER ( ?x != ?y )
+                    .AddFilter(filter1)
+                    .AddPattern(new RDFPattern(y, RDFVocabulary.FOAF.NAME, name)))
+                .AddProjectionVariable(name);
+
+            #region generated sparql query
+            /*
+PREFIX ex: <http://example.org/>
+
+SELECT ?NAME
+WHERE {
+  {
+    ?X <http://xmlns.com/foaf/0.1/mbox> <mailto:alice@example.org> .
+    ?X <http://xmlns.com/foaf/0.1/knows>/<http://xmlns.com/foaf/0.1/knows> ?Y .
+    ?Y <http://xmlns.com/foaf/0.1/name> ?NAME .
+    FILTER ( ?X != ?Y ) 
+  }
+}
+            */
+            string sparqlCommand = selectQuery.ToString();
+            #endregion
+
+            // APPLY SELECT QUERY TO GRAPH
+            RDFSelectQueryResult selectQueryResult = selectQuery.ApplyToGraph(graph);
+
+            Assert.Equal(2, selectQueryResult.SelectResultsCount);
+
+            Assert.Equal("Milou@FR", selectQueryResult.SelectResults.Rows[0]["?NAME"]);
+            Assert.Equal("Snowy@EN", selectQueryResult.SelectResults.Rows[1]["?NAME"]);
+        }
+
+
+        [Fact]
+        public void InversePropertyPaths_AddSequenceStep_Inverse_Test1()
+        {
+            // CREATE NAMESPACE
+            var exNs = new RDFNamespace("ex", "http://example.org/");
+            RDFNamespaceRegister.AddNamespace(exNs);
+
+            RDFNamespaceRegister.SetDefaultNamespace(exNs);
+
+            /*
+              Inverse Property Paths: These two are the same query: the second is just reversing the property direction which swaps the roles of subject and object.
+
+  { ?x foaf:mbox <mailto:alice@example.org> }
+
+  { <mailto:alice@example.org> ^foaf:mbox ?x }
+             */
+
+            string filePath = GetPath(@"Files\Test1.ttl");
+            RDFGraph graph = RDFGraph.FromFile(RDFModelEnums.RDFFormats.Turtle, filePath);
+
+            Assert.Equal(11, graph.TriplesCount);
+
+            var name = new RDFVariable("name");
+            var x = new RDFVariable("x");
+
+            // <mailto:alice@example.org> ^foaf:mbox ?x
+            var variablePropPath1 = new RDFPropertyPath(new RDFResource("mailto:alice@example.org"), x)
+                .AddSequenceStep(new RDFPropertyPathStep(RDFVocabulary.FOAF.MBOX).Inverse());
+
+            // ?x foaf:knows/foaf:name ?name
+            var variablePropPath2 = new RDFPropertyPath(x, name)
+                .AddSequenceStep(new RDFPropertyPathStep(RDFVocabulary.FOAF.KNOWS))
+                .AddSequenceStep(new RDFPropertyPathStep(RDFVocabulary.FOAF.NAME));
+
+            // Select query
+            RDFSelectQuery selectQuery = new RDFSelectQuery()
+                .AddPrefix(exNs)
+                .AddPatternGroup(new RDFPatternGroup("PG1")
+                    .AddPropertyPath(variablePropPath1)
+                    .AddPropertyPath(variablePropPath2))
+                .AddProjectionVariable(name);
+
+            #region generated sparql query
+            /*
+PREFIX ex: <http://example.org/>
+
+SELECT ?NAME
+WHERE {
+  {
+    <mailto:alice@example.org> ^<http://xmlns.com/foaf/0.1/mbox> ?X .
+    ?X <http://xmlns.com/foaf/0.1/knows>/<http://xmlns.com/foaf/0.1/name> ?NAME .
+  }
+}
+            */
+            string sparqlCommand = selectQuery.ToString();
+            #endregion
+
+            // APPLY SELECT QUERY TO GRAPH
+            RDFSelectQueryResult selectQueryResult = selectQuery.ApplyToGraph(graph);
+
+            Assert.Equal(3, selectQueryResult.SelectResultsCount);
+
+            Assert.Equal("Bob", selectQueryResult.SelectResults.Rows[0]["?NAME"]);
+            Assert.Equal("Charlie", selectQueryResult.SelectResults.Rows[1]["?NAME"]);
+            Assert.Equal("Snoopy@EN", selectQueryResult.SelectResults.Rows[2]["?NAME"]);
+        }
+
         
+
+        [Fact]
+        public void InversePropertyPaths_AddSequenceStep_Inverse_Test2()
+        {
+            // CREATE NAMESPACE
+            var exNs = new RDFNamespace("ex", "http://example.org/");
+            RDFNamespaceRegister.AddNamespace(exNs);
+
+            RDFNamespaceRegister.SetDefaultNamespace(exNs);
+
+            /*
+         Inverse Path Sequence: Find all the people who know someone ?x knows.
+
+  {
+    ?x foaf:knows/^foaf:knows ?y .  
+    FILTER(?x != ?y)
+  }
+
+which is equivalent to (?gen1 is a system generated variable):
+
+  {
+    ?x foaf:knows ?gen1 .
+    ?y foaf:knows ?gen1 .  
+    FILTER(?x != ?y)
+  }
+         */
+
+            string filePath = GetPath(@"Files\Test18.ttl");
+            RDFGraph graph = RDFGraph.FromFile(RDFModelEnums.RDFFormats.Turtle, filePath);
+
+            Assert.Equal(16, graph.TriplesCount);
+
+            var name = new RDFVariable("name");
+            var x = new RDFVariable("x");
+            var y = new RDFVariable("y");
+
+            // {FILTER ( ?X != ?Y )}
+            var filter1 = new RDFComparisonFilter(RDFQueryEnums.RDFComparisonFlavors.NotEqualTo, x, y);
+
+            // ?x foaf:knows/^foaf:knows ?y
+            var variablePropPath1 = new RDFPropertyPath(x, y)
+                .AddSequenceStep(new RDFPropertyPathStep(RDFVocabulary.FOAF.KNOWS))
+                .AddSequenceStep(new RDFPropertyPathStep(RDFVocabulary.FOAF.KNOWS).Inverse());
+
+          
+
+            // Select query
+            RDFSelectQuery selectQuery = new RDFSelectQuery()
+                .AddPrefix(exNs)
+                .AddPatternGroup(new RDFPatternGroup("PG1")
+                    .AddPropertyPath(variablePropPath1)
+                    .AddFilter(filter1))
+                .AddProjectionVariable(x)
+                .AddProjectionVariable(y);
+
+            #region generated sparql query
+            /*
+PREFIX ex: <http://example.org/>
+
+SELECT ?X ?Y
+WHERE {
+  {
+    ?X <http://xmlns.com/foaf/0.1/knows>/^<http://xmlns.com/foaf/0.1/knows> ?Y .
+    FILTER ( ?X != ?Y ) 
+  }
+}
+            */
+            string sparqlCommand = selectQuery.ToString();
+            #endregion
+
+            // APPLY SELECT QUERY TO GRAPH
+            RDFSelectQueryResult selectQueryResult = selectQuery.ApplyToGraph(graph);
+
+            Assert.Equal(4, selectQueryResult.SelectResultsCount);
+
+            Assert.Equal("http://example.org/bob#me", selectQueryResult.SelectResults.Rows[0]["?X"]);
+            Assert.Equal("http://example.org/charlie#me", selectQueryResult.SelectResults.Rows[0]["?Y"]);
+
+            Assert.Equal("http://example.org/charlie#me", selectQueryResult.SelectResults.Rows[1]["?X"]);
+            Assert.Equal("http://example.org/bob#me", selectQueryResult.SelectResults.Rows[1]["?Y"]);
+
+            Assert.Equal("http://example.org/snoopy", selectQueryResult.SelectResults.Rows[2]["?X"]);
+            Assert.Equal("http://example.org/tintin", selectQueryResult.SelectResults.Rows[2]["?Y"]);
+
+            Assert.Equal("http://example.org/tintin", selectQueryResult.SelectResults.Rows[3]["?X"]);
+            Assert.Equal("http://example.org/snoopy", selectQueryResult.SelectResults.Rows[3]["?Y"]);
+        }
+
+
+
+
     }
 }
