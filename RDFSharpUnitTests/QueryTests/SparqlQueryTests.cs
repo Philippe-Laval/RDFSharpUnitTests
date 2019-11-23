@@ -32,8 +32,9 @@ namespace RDFSharpTests.QueryTests
             Assert.Equal(1, graph.TriplesCount);
         }
 
-        // 2 Making Simple Queries (Informative)
-        // 2.1 Writing a Simple Query
+        #region 2 Making Simple Queries (Informative)
+
+        #region 2.1 Writing a Simple Query
 
         /*
 @prefix dc: <http://purl.org/dc/elements/1.1/> .
@@ -157,7 +158,9 @@ WHERE {
 
             Assert.Equal("SPARQL Tutorial", selectQueryResult.SelectResults.Rows[0][0]);
         }
+        #endregion
 
+        #region 2.2 Multiple Matches
         /// <summary>
         /// 2.2 Multiple Matches
         /// This is a basic graph pattern match; all the variables used in the query pattern must be bound in every solution.
@@ -280,8 +283,12 @@ WHERE {
             Assert.Equal("mailto:peter@example.org", selectQueryResult.SelectResults.Rows[1]["?MBOX"]);
         }
 
+        #endregion
+
+        #region 2.3 Matching RDF Literals
+
+        #region 2.3.1 Matching Literals with Language Tags
         /// <summary>
-        /// 2.3 Matching RDF Literals
         /// 2.3.1 Matching Literals with Language Tags
         /// </summary>
         [Fact]
@@ -329,10 +336,13 @@ WHERE {
             Assert.Equal("http://example.org/ns#x", selectQueryResult.SelectResults.Rows[0]["?V"]);
         }
 
+        #endregion
+
         // Not possible to build a query with 42
 
+        #region 2.3.2 Matching Literals with Numeric Types
+
         /// <summary>
-        /// 2.3 Matching RDF Literals
         /// 2.3.2 Matching Literals with Numeric Types
         /// </summary>
         [Fact]
@@ -375,10 +385,10 @@ WHERE {
             Assert.Equal("http://example.org/ns#y", selectQueryResult.SelectResults.Rows[0]["?V"]);
         }
 
+        #endregion
 
-
+        #region 2.3.3 Matching Literals with Arbitrary Datatypes
         /// <summary>
-        /// 2.3 Matching RDF Literals
         /// 2.3.3 Matching Literals with Arbitrary Datatypes
         /// </summary>
         [Fact]
@@ -413,6 +423,12 @@ WHERE {
             Assert.Equal("http://example.org/ns#z", selectQueryResult.SelectResults.Rows[0]["?V"]);
 
         }
+
+        #endregion
+
+        #endregion
+
+        #region 2.4 Blank Node Labels in Query Results
 
         /// <summary>
         /// 2.4 Blank Node Labels in Query Results
@@ -458,6 +474,10 @@ WHERE  { ?x foaf:name ?name }
             Assert.Equal("Bob", selectQueryResult.SelectResults.Rows[1]["?NAME"]);
             Assert.Equal("bnode:b", selectQueryResult.SelectResults.Rows[1]["?X"]);
         }
+
+        #endregion
+
+        #region 2.5 Creating Values with Expressions
 
         /// <summary>
         /// 2.5 Creating Values with Expressions
@@ -523,6 +543,10 @@ WHERE  {
             //Assert.Equal("bnode:b", selectQueryResult.SelectResults.Rows[1]["?X"]);
         }
 
+        #endregion
+
+        #region 2.6 Building RDF Graphs
+
         /// <summary>
         /// 2.6 Building RDF Graphs
         /// </summary>
@@ -573,6 +597,10 @@ WHERE  { ?x org:employeeName ?name }
             Assert.Equal("Bob", constructQueryResult.ConstructResults.Rows[1][2]);
 
         }
+
+        #endregion
+
+        #endregion
 
         // 3 RDF Term Constraints (Informative)
 
@@ -1882,7 +1910,7 @@ WHERE {
             var name = new RDFVariable("name");
             var x = new RDFVariable("x");
 
-           
+
             // ?x foaf:knows/foaf:name ?name
             var variablePropPath = new RDFPropertyPath(x, name)
                 .AddSequenceStep(new RDFPropertyPathStep(RDFVocabulary.FOAF.KNOWS))
@@ -2149,7 +2177,7 @@ WHERE {
             Assert.Equal("Snoopy@EN", selectQueryResult.SelectResults.Rows[2]["?NAME"]);
         }
 
-        
+
 
         [Fact]
         public void InversePropertyPaths_AddSequenceStep_Inverse_Test2()
@@ -2194,7 +2222,7 @@ which is equivalent to (?gen1 is a system generated variable):
                 .AddSequenceStep(new RDFPropertyPathStep(RDFVocabulary.FOAF.KNOWS))
                 .AddSequenceStep(new RDFPropertyPathStep(RDFVocabulary.FOAF.KNOWS).Inverse());
 
-          
+
 
             // Select query
             RDFSelectQuery selectQuery = new RDFSelectQuery()
@@ -2435,7 +2463,7 @@ WHERE {
             var variablePropPath = new RDFPropertyPath(new RDFResource(exNs + "order"), x)
                 .AddSequenceStep(new RDFPropertyPathStep(new RDFResource(exNs + "item")))
                 .AddSequenceStep(new RDFPropertyPathStep(new RDFResource(exNs + "price")));
-            
+
             var gm = new RDFGroupByModifier(new List<RDFVariable> { x });
             gm.AddAggregator(new RDFSumAggregator(x, total));
 
@@ -2512,7 +2540,7 @@ VALUES (?z) { ("abc") ("def") }
 
             var nsNs = new RDFNamespace("ns", "http://example.org/ns#");
             RDFNamespaceRegister.AddNamespace(exNs);
-        
+
             RDFNamespaceRegister.SetDefaultNamespace(exNs);
 
             string filePath = GetPath(@"Files\Test20.ttl");
@@ -2643,7 +2671,7 @@ WHERE {
                 {
                     null, //UNDEF
                     new RDFResource(exNs + "book2")
-                    
+
                 })
              .AddColumn(new RDFVariable("title"),
                 new List<RDFPatternMember>()
@@ -2710,5 +2738,111 @@ WHERE {
 
         #endregion
 
+        #region 11 Aggregates
+
+        #region 11.1 Aggregate Example
+
+        [Fact]
+        public void AggregateExample()
+        {
+            // CREATE NAMESPACE
+            var exNs = new RDFNamespace("ex", "http://books.example/");
+            RDFNamespaceRegister.AddNamespace(exNs);
+
+            RDFNamespaceRegister.SetDefaultNamespace(exNs);
+
+            /*
+         PREFIX : <http://books.example/>
+SELECT (SUM(?lprice) AS ?totalPrice)
+WHERE {
+  ?org :affiliates ?auth .
+  ?auth :writesBook ?book .
+  ?book :price ?lprice .
+}
+GROUP BY ?org
+HAVING (SUM(?lprice) > 10)
+            */
+
+            string filePath = GetPath(@"Files\Test21.ttl");
+            RDFGraph graph = RDFGraph.FromFile(RDFModelEnums.RDFFormats.Turtle, filePath);
+
+            Assert.Equal(11, graph.TriplesCount);
+
+            var lprice = new RDFVariable("lprice");
+            var totalPrice = new RDFVariable("totalPrice");
+            var org = new RDFVariable("org");
+            var auth = new RDFVariable("auth");
+            var book = new RDFVariable("book");
+
+            var gm = new RDFGroupByModifier(new List<RDFVariable> { org });
+            gm.AddAggregator(new RDFSumAggregator(lprice, totalPrice)
+                .SetHavingClause(RDFQueryEnums.RDFComparisonFlavors.GreaterThan, new RDFTypedLiteral("10", RDFModelEnums.RDFDatatypes.XSD_INTEGER)
+            ));
+
+            // Select query
+            RDFSelectQuery selectQuery = new RDFSelectQuery()
+                .AddPrefix(exNs)
+                .AddPatternGroup(new RDFPatternGroup("PG1")
+                    .AddPattern(new RDFPattern(org, new RDFResource(exNs + "affiliates"), auth))
+                    .AddPattern(new RDFPattern(auth, new RDFResource(exNs + "writesBook"), book))
+                    .AddPattern(new RDFPattern(book, new RDFResource(exNs + "price"), lprice))
+                    )
+                .AddModifier(gm)
+                .AddProjectionVariable(totalPrice);
+
+            #region generated sparql query
+            /*
+PREFIX ex: <http://books.example/>
+
+SELECT ?ORG (SUM(?LPRICE) AS ?TOTALPRICE)
+WHERE {
+  {
+    ?ORG ex:affiliates ?AUTH .
+    ?AUTH ex:writesBook ?BOOK .
+    ?BOOK ex:price ?LPRICE .
+  }
+}
+GROUP BY ?ORG
+HAVING ((SUM(?LPRICE) > "10"^^<http://www.w3.org/2001/XMLSchema#integer>))
+            */
+            string sparqlCommand = selectQuery.ToString();
+            #endregion
+
+            // APPLY SELECT QUERY TO GRAPH
+            RDFSelectQueryResult selectQueryResult = selectQuery.ApplyToGraph(graph);
+
+            Assert.Equal(1, selectQueryResult.SelectResultsCount);
+
+            Assert.Equal("21^^http://www.w3.org/2001/XMLSchema#double", selectQueryResult.SelectResults.Rows[0]["?TOTALPRICE"]);
+        }
+
+
+        #endregion
+
+        #region 11.2 GROUP BY
+
+        #endregion
+
+        #region 11.3 HAVING
+
+        #endregion
+
+        #region 11.4 Aggregate Projection Restrictions
+
+        #endregion
+
+        #region 11.5 Aggregate Example (with errors)
+        #endregion
+
+
+        #endregion
+
+        #region 12 Subqueries
+
+        #endregion
+
+        #region 13 RDF Dataset
+
+        #endregion
     }
 }
