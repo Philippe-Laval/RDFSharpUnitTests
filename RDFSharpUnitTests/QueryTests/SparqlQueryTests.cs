@@ -1804,24 +1804,24 @@ WHERE {
 
             Assert.Equal(2, selectQueryResult.SelectResultsCount);
 
-            var book1 = selectQueryResult.SelectResults.Rows[0]["?BOOK"].ToString();
-            var book2 = selectQueryResult.SelectResults.Rows[1]["?BOOK"].ToString();
+            var b1 = selectQueryResult.SelectResults.Rows[0]["?BOOK"].ToString();
+            var b2 = selectQueryResult.SelectResults.Rows[1]["?BOOK"].ToString();
             var dp1 = selectQueryResult.SelectResults.Rows[0]["?DISPLAYSTRING"].ToString();
             var dp2 = selectQueryResult.SelectResults.Rows[1]["?DISPLAYSTRING"].ToString();
 
-            if (book1 == "book1")
+            if (b1 == "book1")
             {
-                Assert.Equal("book2", book2);
+                Assert.Equal("book2", b2);
                 Assert.Equal("the book2", dp2);
 
                 Assert.Equal("the book1", dp1);
             }
             else
             {
-                Assert.Equal("http://example.org/book/book2", book1);
+                Assert.Equal("http://example.org/book/book2", b1);
                 Assert.Equal("the book2", dp1);
 
-                Assert.Equal("http://example.org/book/book1", book2);
+                Assert.Equal("http://example.org/book/book1", b2);
                 Assert.Equal("the book1", dp2);
             }
         }
