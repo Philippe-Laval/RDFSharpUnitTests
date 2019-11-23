@@ -2590,7 +2590,120 @@ WHERE {
             Assert.Equal("SPARQL Tutorial", selectQueryResult.SelectResults.Rows[0]["?TITLE"]);
             Assert.Equal("42^^http://www.w3.org/2001/XMLSchema#integer", selectQueryResult.SelectResults.Rows[0]["?PRICE"]);
         }
- 
+
+        [Fact]
+        public void VALUES_Test2()
+        {
+            // CREATE NAMESPACE
+            var exNs = new RDFNamespace("ex", "http://example.org/book/");
+            RDFNamespaceRegister.AddNamespace(exNs);
+
+            var nsNs = new RDFNamespace("ns", "http://example.org/ns#");
+            RDFNamespaceRegister.AddNamespace(exNs);
+
+            RDFNamespaceRegister.SetDefaultNamespace(exNs);
+
+            string filePath = GetPath(@"Files\Test20.ttl");
+            RDFGraph graph = RDFGraph.FromFile(RDFModelEnums.RDFFormats.Turtle, filePath);
+
+            Assert.Equal(4, graph.TriplesCount);
+
+            /*
+    PREFIX dc:   <http://purl.org/dc/elements/1.1/> 
+    PREFIX :     <http://example.org/book/> 
+    PREFIX ns:   <http://example.org/ns#> 
+
+    SELECT ?book ?title ?price
+    {
+       ?book dc:title ?title ;
+             ns:price ?price .
+       VALUES (?book ?title)
+       { (UNDEF "SPARQL Tutorial")
+         (:book2 UNDEF)
+       }
+    }         
+             */
+
+            var book = new RDFVariable("book");
+            var title = new RDFVariable("title");
+            var price = new RDFVariable("price");
+
+            //Declare the following SPARQL values:
+
+            /* 
+             * Generated
+
+             VALUES (?BOOK ?TITLE) {
+                ( UNDEF "SPARQL Tutorial" )
+                ( <http://example.org/book/book2> UNDEF )
+             }
+             */
+            RDFValues myValues = new RDFValues()
+            .AddColumn(new RDFVariable("book"), new List<RDFPatternMember>()
+                {
+                    null, //UNDEF
+                    new RDFResource(exNs + "book2")
+                    
+                })
+             .AddColumn(new RDFVariable("title"),
+                new List<RDFPatternMember>()
+                {
+                    new RDFPlainLiteral("SPARQL Tutorial"),
+                    null //UNDEF
+                });
+
+            // Select query
+            RDFSelectQuery selectQuery = new RDFSelectQuery()
+                .AddPrefix(exNs)
+                .AddPatternGroup(
+                    new RDFPatternGroup("PG1")
+                        .AddPattern(new RDFPattern(book, RDFVocabulary.DC.TITLE, title))
+                        .AddPattern(new RDFPattern(book, new RDFResource(nsNs + "price"), price))
+                        .AddValues(myValues)
+                    )
+                .AddProjectionVariable(book)
+                .AddProjectionVariable(title)
+                .AddProjectionVariable(price);
+
+            #region generated sparql query
+            /*
+PREFIX ex: <http://example.org/book/>
+
+SELECT ?BOOK ?TITLE ?PRICE
+WHERE {
+  {
+    ?BOOK <http://purl.org/dc/elements/1.1/title> ?TITLE .
+    ?BOOK <http://example.org/ns#price> ?PRICE .
+    VALUES (?BOOK ?TITLE) {
+      ( UNDEF "SPARQL Tutorial" )
+      ( ex:book2 UNDEF )
+    } .
+  }
+}
+            */
+            string sparqlCommand = selectQuery.ToString();
+            #endregion
+
+            // APPLY SELECT QUERY TO GRAPH
+            RDFSelectQueryResult selectQueryResult = selectQuery.ApplyToGraph(graph);
+
+            Assert.Equal(2, selectQueryResult.SelectResultsCount);
+
+            Assert.Equal("http://example.org/book/book1", selectQueryResult.SelectResults.Rows[0]["?BOOK"]);
+            Assert.Equal("SPARQL Tutorial", selectQueryResult.SelectResults.Rows[0]["?TITLE"]);
+            Assert.Equal("42^^http://www.w3.org/2001/XMLSchema#integer", selectQueryResult.SelectResults.Rows[0]["?PRICE"]);
+
+            Assert.Equal("http://example.org/book/book2", selectQueryResult.SelectResults.Rows[1]["?BOOK"]);
+            Assert.Equal("The Semantic Web", selectQueryResult.SelectResults.Rows[1]["?TITLE"]);
+            Assert.Equal("23^^http://www.w3.org/2001/XMLSchema#integer", selectQueryResult.SelectResults.Rows[1]["?PRICE"]);
+
+            /*
+             book	title	price
+<http://example.org/book/book1>	"SPARQL Tutorial"	42
+<http://example.org/book/book2>	"The Semantic Web"	23
+             */
+        }
+
         #endregion
 
         #endregion

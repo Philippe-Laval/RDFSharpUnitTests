@@ -50,7 +50,7 @@
     <None Update="Files\Test2.ttl">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="Files\test20.ttl">
+    <None Update="Files\Test20.ttl">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Update="Files\Test3.ttl">
