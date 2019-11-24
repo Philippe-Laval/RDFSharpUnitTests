@@ -3357,7 +3357,7 @@ ORDER BY DESC(?EMP)
             Assert.Equal("Charles", selectQueryResult.SelectResults.Rows[2]["?NAME"]);
             Assert.Equal("Alice", selectQueryResult.SelectResults.Rows[3]["?NAME"]);
         }
-    
+
 
         [Fact]
         void ORDER_BY_Test3()
@@ -3432,15 +3432,296 @@ ORDER BY ASC(?NAME) DESC(?EMP)
         #endregion
 
         #region 15.2 Projection
+
+        [Fact]
+        void Projection_Test1()
+        {
+            var foafNs = RDFNamespaceRegister.GetByPrefix("foaf");
+
+            /*
+    PREFIX foaf:       <http://xmlns.com/foaf/0.1/>
+SELECT ?name
+WHERE
+ { ?x foaf:name ?name }
+
+            */
+
+            string filePath = GetPath(@"Files\Test26.ttl");
+            RDFGraph graph = RDFGraph.FromFile(RDFModelEnums.RDFFormats.Turtle, filePath);
+
+            Assert.Equal(4, graph.TriplesCount);
+
+            var x = new RDFVariable("x");
+            var name = new RDFVariable("name");
+
+            // Select query
+            RDFSelectQuery selectQuery = new RDFSelectQuery()
+                .AddPrefix(foafNs)
+                .AddPatternGroup(new RDFPatternGroup("PG1")
+                    .AddPattern(new RDFPattern(x, RDFVocabulary.FOAF.NAME, name))
+                )
+                .AddProjectionVariable(name);
+
+            #region generated sparql query
+            /*
+PREFIX foaf: <http://xmlns.com/foaf/0.1/>
+
+SELECT ?NAME
+WHERE {
+  {
+    ?X foaf:name ?NAME .
+  }
+}
+            */
+            string sparqlCommand = selectQuery.ToString();
+            #endregion
+
+            // APPLY SELECT QUERY TO GRAPH
+            RDFSelectQueryResult selectQueryResult = selectQuery.ApplyToGraph(graph);
+
+            Assert.Equal(2, selectQueryResult.SelectResultsCount);
+
+            Assert.Equal("Alice", selectQueryResult.SelectResults.Rows[0]["?NAME"]);
+            Assert.Equal("Bob", selectQueryResult.SelectResults.Rows[1]["?NAME"]);
+        }
+
         #endregion
 
         #region 15.3 Duplicate Solutions
+
+        [Fact]
+        void Projection_Test2()
+        {
+            var foafNs = RDFNamespaceRegister.GetByPrefix("foaf");
+
+            /*
+PREFIX foaf:    <http://xmlns.com/foaf/0.1/>
+SELECT ?name WHERE { ?x foaf:name ?name }
+
+            */
+
+            string filePath = GetPath(@"Files\Test27.ttl");
+            RDFGraph graph = RDFGraph.FromFile(RDFModelEnums.RDFFormats.Turtle, filePath);
+
+            Assert.Equal(6, graph.TriplesCount);
+
+            var x = new RDFVariable("x");
+            var name = new RDFVariable("name");
+
+            // Select query
+            RDFSelectQuery selectQuery = new RDFSelectQuery()
+                .AddPrefix(foafNs)
+                .AddPatternGroup(new RDFPatternGroup("PG1")
+                    .AddPattern(new RDFPattern(x, RDFVocabulary.FOAF.NAME, name))
+                )
+                .AddProjectionVariable(name);
+
+            #region generated sparql query
+            /*
+PREFIX foaf: <http://xmlns.com/foaf/0.1/>
+
+SELECT ?NAME
+WHERE {
+  {
+    ?X foaf:name ?NAME .
+  }
+}
+            */
+            string sparqlCommand = selectQuery.ToString();
+            #endregion
+
+            // APPLY SELECT QUERY TO GRAPH
+            RDFSelectQueryResult selectQueryResult = selectQuery.ApplyToGraph(graph);
+
+            Assert.Equal(3, selectQueryResult.SelectResultsCount);
+
+            Assert.Equal("Alice", selectQueryResult.SelectResults.Rows[0]["?NAME"]);
+            Assert.Equal("Alice", selectQueryResult.SelectResults.Rows[1]["?NAME"]);
+            Assert.Equal("Alice", selectQueryResult.SelectResults.Rows[2]["?NAME"]);
+        }
+
+        #region 15.3.1 DISTINCT
+
+        [Fact]
+        void Projection_DISTINCT()
+        {
+            var foafNs = RDFNamespaceRegister.GetByPrefix("foaf");
+
+            /*
+PREFIX foaf:    <http://xmlns.com/foaf/0.1/>
+SELECT DISTINCT ?name WHERE { ?x foaf:name ?name }
+            */
+
+            string filePath = GetPath(@"Files\Test27.ttl");
+            RDFGraph graph = RDFGraph.FromFile(RDFModelEnums.RDFFormats.Turtle, filePath);
+
+            Assert.Equal(6, graph.TriplesCount);
+
+            var x = new RDFVariable("x");
+            var name = new RDFVariable("name");
+
+            // Select query
+            RDFSelectQuery selectQuery = new RDFSelectQuery()
+                .AddPrefix(foafNs)
+                .AddPatternGroup(new RDFPatternGroup("PG1")
+                    .AddPattern(new RDFPattern(x, RDFVocabulary.FOAF.NAME, name))
+                )
+                .AddModifier(new RDFDistinctModifier())
+                .AddProjectionVariable(name);
+
+            #region generated sparql query
+            /*
+PREFIX foaf: <http://xmlns.com/foaf/0.1/>
+
+SELECT DISTINCT ?NAME
+WHERE {
+  {
+    ?X foaf:name ?NAME .
+  }
+}
+            */
+            string sparqlCommand = selectQuery.ToString();
+            #endregion
+
+            // APPLY SELECT QUERY TO GRAPH
+            RDFSelectQueryResult selectQueryResult = selectQuery.ApplyToGraph(graph);
+
+            Assert.Equal(1, selectQueryResult.SelectResultsCount);
+
+            Assert.Equal("Alice", selectQueryResult.SelectResults.Rows[0]["?NAME"]);
+        }
+
+        #endregion
+
+        #region 15.3.2 REDUCED
+
+        // Not available
+
+        #endregion
+
         #endregion
 
         #region 15.4 OFFSET
+
+        [Fact]
+        void Projection_OFFSET_LIMIT()
+        {
+            var foafNs = RDFNamespaceRegister.GetByPrefix("foaf");
+
+            // Using LIMIT and OFFSET to select different subsets of the query solutions will not be useful unless the order is made predictable by using ORDER BY.
+
+            /*
+    PREFIX foaf:    <http://xmlns.com/foaf/0.1/>
+
+    SELECT  ?name
+    WHERE   { ?x foaf:name ?name }
+    ORDER BY ?name
+    LIMIT   2
+    OFFSET  1
+             */
+
+            string filePath = GetPath(@"Files\Test28.ttl");
+            RDFGraph graph = RDFGraph.FromFile(RDFModelEnums.RDFFormats.Turtle, filePath);
+
+            Assert.Equal(10, graph.TriplesCount);
+
+            var x = new RDFVariable("x");
+            var name = new RDFVariable("name");
+
+            // Select query
+            RDFSelectQuery selectQuery = new RDFSelectQuery()
+                .AddPrefix(foafNs)
+                .AddPatternGroup(new RDFPatternGroup("PG1")
+                    .AddPattern(new RDFPattern(x, RDFVocabulary.FOAF.NAME, name))
+                )
+                .AddModifier(new RDFOrderByModifier(name, RDFQueryEnums.RDFOrderByFlavors.ASC))
+                .AddModifier(new RDFLimitModifier(2))
+                .AddModifier(new RDFOffsetModifier(1))
+                .AddProjectionVariable(name);
+
+            #region generated sparql query
+            /*
+PREFIX foaf: <http://xmlns.com/foaf/0.1/>
+
+SELECT ?NAME
+WHERE {
+  {
+    ?X foaf:name ?NAME .
+  }
+}
+ORDER BY ASC(?NAME)
+LIMIT 2
+OFFSET 1
+            */
+            string sparqlCommand = selectQuery.ToString();
+            #endregion
+
+            // APPLY SELECT QUERY TO GRAPH
+            RDFSelectQueryResult selectQueryResult = selectQuery.ApplyToGraph(graph);
+
+            Assert.Equal(2, selectQueryResult.SelectResultsCount);
+
+            Assert.Equal("Bernard", selectQueryResult.SelectResults.Rows[0]["?NAME"]);
+            Assert.Equal("Charlie", selectQueryResult.SelectResults.Rows[1]["?NAME"]);
+        }
+
         #endregion
 
         #region 15.5 LIMIT
+
+        [Fact]
+        void Projection_LIMIT()
+        {
+            var foafNs = RDFNamespaceRegister.GetByPrefix("foaf");
+
+            // Using LIMIT and OFFSET to select different subsets of the query solutions will not be useful unless the order is made predictable by using ORDER BY.
+
+            /*
+PREFIX foaf:    <http://xmlns.com/foaf/0.1/>
+
+SELECT ?name
+WHERE { ?x foaf:name ?name }
+LIMIT 20
+             */
+
+            string filePath = GetPath(@"Files\Test28.ttl");
+            RDFGraph graph = RDFGraph.FromFile(RDFModelEnums.RDFFormats.Turtle, filePath);
+
+            Assert.Equal(10, graph.TriplesCount);
+
+            var x = new RDFVariable("x");
+            var name = new RDFVariable("name");
+
+            // Select query
+            RDFSelectQuery selectQuery = new RDFSelectQuery()
+                .AddPrefix(foafNs)
+                .AddPatternGroup(new RDFPatternGroup("PG1")
+                    .AddPattern(new RDFPattern(x, RDFVocabulary.FOAF.NAME, name))
+                )
+                .AddModifier(new RDFLimitModifier(2))
+                .AddProjectionVariable(name);
+
+            #region generated sparql query
+            /*
+PREFIX foaf: <http://xmlns.com/foaf/0.1/>
+
+SELECT ?NAME
+WHERE {
+  {
+    ?X foaf:name ?NAME .
+  }
+}
+LIMIT 2
+            */
+            string sparqlCommand = selectQuery.ToString();
+            #endregion
+
+            // APPLY SELECT QUERY TO GRAPH
+            RDFSelectQueryResult selectQueryResult = selectQuery.ApplyToGraph(graph);
+
+            Assert.Equal(2, selectQueryResult.SelectResultsCount);
+        }
+
         #endregion
 
         #endregion
@@ -3448,9 +3729,147 @@ ORDER BY ASC(?NAME) DESC(?EMP)
         #region 16 Query Forms
 
         #region 16.1 SELECT
+
+        #region 16.1.1 Projection
+
+        [Fact]
+        void SELECT_Query()
+        {
+            var foafNs = RDFNamespaceRegister.GetByPrefix("foaf");
+
+            /*
+PREFIX foaf:    <http://xmlns.com/foaf/0.1/>
+SELECT ?nameX ?nameY ?nickY
+WHERE
+  { ?x foaf:knows ?y ;
+       foaf:name ?nameX .
+    ?y foaf:name ?nameY .
+    OPTIONAL { ?y foaf:nick ?nickY }
+  }
+             */
+
+            string filePath = GetPath(@"Files\Test29.ttl");
+            RDFGraph graph = RDFGraph.FromFile(RDFModelEnums.RDFFormats.Turtle, filePath);
+
+            Assert.Equal(6, graph.TriplesCount);
+
+            var nameX = new RDFVariable("nameX");
+            var nameY = new RDFVariable("nameY");
+            var nickY = new RDFVariable("nickY");
+            var x = new RDFVariable("x");
+            var y = new RDFVariable("y");
+
+            // Select query
+            RDFSelectQuery selectQuery = new RDFSelectQuery()
+                .AddPrefix(foafNs)
+                .AddPatternGroup(new RDFPatternGroup("PG1")
+                    .AddPattern(new RDFPattern(x, RDFVocabulary.FOAF.KNOWS, y))
+                    .AddPattern(new RDFPattern(x, RDFVocabulary.FOAF.NAME, nameX))
+                    .AddPattern(new RDFPattern(y, RDFVocabulary.FOAF.NAME, nameY))
+                    .AddPattern(new RDFPattern(y, RDFVocabulary.FOAF.NICK, nickY).Optional())
+                )
+                .AddProjectionVariable(nameX)
+                .AddProjectionVariable(nameY)
+                .AddProjectionVariable(nickY);
+
+            #region generated sparql query
+            /*
+PREFIX foaf: <http://xmlns.com/foaf/0.1/>
+
+SELECT ?NAMEX ?NAMEY ?NICKY
+WHERE {
+  {
+    ?X foaf:knows ?Y .
+    ?X foaf:name ?NAMEX .
+    ?Y foaf:name ?NAMEY .
+    OPTIONAL { ?Y foaf:nick ?NICKY } .
+  }
+}
+            */
+            string sparqlCommand = selectQuery.ToString();
+            #endregion
+
+            // APPLY SELECT QUERY TO GRAPH
+            RDFSelectQueryResult selectQueryResult = selectQuery.ApplyToGraph(graph);
+
+            Assert.Equal(2, selectQueryResult.SelectResultsCount);
+        }
+
+        #endregion
+
+        #region 16.1.2 SELECT Expressions
+
+        // Not possible
+
+        #endregion
+
         #endregion
 
         #region 16.2 CONSTRUCT
+
+        [Fact]
+        void CONSTRUCT_Query()
+        {
+            var vcardNs = new RDFNamespace("vcard", "http://www.w3.org/2001/vcard-rdf/3.0#");
+            RDFNamespaceRegister.AddNamespace(vcardNs);
+
+            //RDFNamespaceRegister.SetDefaultNamespace(exNs);
+
+            var foafNs = RDFNamespaceRegister.GetByPrefix("foaf");
+
+            /*
+PREFIX foaf:    <http://xmlns.com/foaf/0.1/>
+PREFIX vcard:   <http://www.w3.org/2001/vcard-rdf/3.0#>
+CONSTRUCT   { <http://example.org/person#Alice> vcard:FN ?name }
+WHERE       { ?x foaf:name ?name }
+             */
+
+            string filePath = GetPath(@"Files\Test30.ttl");
+            RDFGraph graph = RDFGraph.FromFile(RDFModelEnums.RDFFormats.Turtle, filePath);
+
+            Assert.Equal(2, graph.TriplesCount);
+
+            var x = new RDFVariable("x");
+            var name = new RDFVariable("name");
+
+            // Select query
+            RDFConstructQuery constructQuery = new RDFConstructQuery()
+                .AddPrefix(vcardNs)
+                .AddPrefix(foafNs)
+                .AddPatternGroup(new RDFPatternGroup("PG1")
+                    .AddPattern(new RDFPattern(x, RDFVocabulary.FOAF.NAME, name))
+                )
+                .AddTemplate(new RDFPattern(new RDFResource("http://example.org/person#Alice"), new RDFResource(vcardNs + "FN"), name));
+
+            #region generated sparql query
+            /*
+PREFIX vcard: <http://www.w3.org/2001/vcard-rdf/3.0#>
+PREFIX foaf: <http://xmlns.com/foaf/0.1/>
+
+CONSTRUCT
+{
+  <http://example.org/person#Alice> vcard:FN ?NAME .
+}
+WHERE {
+  {
+    ?X foaf:name ?NAME .
+  }
+}             
+             */
+            string sparqlCommand = constructQuery.ToString();
+            #endregion
+
+            // APPLY SELECT QUERY TO GRAPH
+            RDFConstructQueryResult constructQueryResult = constructQuery.ApplyToGraph(graph);
+
+            Assert.Equal(1, constructQueryResult.ConstructResultsCount);
+
+            /* <http://example.org/person#Alice> vcard:FN "Alice" */
+            Assert.Equal("http://example.org/person#Alice", constructQueryResult.ConstructResults.Rows[0][0]);
+            Assert.Equal("http://www.w3.org/2001/vcard-rdf/3.0#FN", constructQueryResult.ConstructResults.Rows[0][1]);
+            Assert.Equal("Alice", constructQueryResult.ConstructResults.Rows[0][2]);
+        }
+
         #endregion
 
         #region 16.4 DESCRIBE (Informative)
