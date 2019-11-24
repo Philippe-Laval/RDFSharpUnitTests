@@ -602,10 +602,11 @@ WHERE  { ?x org:employeeName ?name }
 
         #endregion
 
-        // 3 RDF Term Constraints (Informative)
+        #region 3 RDF Term Constraints (Informative)
 
+        #region 3.1 Restricting the Value of Strings
         /// <summary>
-        /// 3.1 Restricting the Value of Strings
+        /// 
         /// </summary>
         [Fact]
         public void RestrictingTheValueOfString()
@@ -684,10 +685,12 @@ WHERE {
             Assert.Equal("The Semantic Web", selectQueryResult.SelectResults.Rows[0][0]);
         }
 
+        #endregion
 
+        #region 3.2 Restricting Numeric Values
 
         /// <summary>
-        /// 3.2 Restricting Numeric Values
+        /// 
         /// </summary>
         [Fact]
         public void RestrictingNumericValues()
@@ -759,10 +762,22 @@ WHERE {
             Assert.Equal("23", selectQueryResult.SelectResults.Rows[0][1]);
         }
 
-        // 6 Including Optional Values
+        #endregion
+
+        #endregion
+
+        #region 4 SPARQL Syntax
+        #endregion
+
+        #region 5 Graph Patterns
+        #endregion
+
+        #region 6 Including Optional Values
+
+        #region 6.1 Optional Pattern Matching
 
         /// <summary>
-        /// 6.1 Optional Pattern Matching
+        /// 
         /// </summary>
         [Fact]
         public void OptionalPatternMatching()
@@ -823,8 +838,12 @@ WHERE  { ?x foaf:name  ?name .
             Assert.Equal(DBNull.Value, selectQueryResult.SelectResults.Rows[2]["?MBOX"]);
         }
 
+        #endregion
+
+        #region 6.2 Constraints in Optional Pattern Matching
+
         /// <summary>
-        /// 6.2 Constraints in Optional Pattern Matching
+        /// 
         /// </summary>
         [Fact]
         public void ConstraintsInOptionalPatternMatching()
@@ -898,8 +917,12 @@ WHERE {
             Assert.Equal("23^^http://www.w3.org/2001/XMLSchema#integer", selectQueryResult.SelectResults.Rows[1]["?PRICE"]);
         }
 
+        #endregion
+
+        #region 6.3 Multiple Optional Graph Patterns
+
         /// <summary>
-        /// 6.3 Multiple Optional Graph Patterns
+        /// 
         /// </summary>
         [Fact]
         public void MultipleOptionalGraphPatterns()
@@ -978,8 +1001,14 @@ WHERE {
             Assert.Equal(DBNull.Value, selectQueryResult.SelectResults.Rows[1]["?HPAGE"]);
         }
 
+        #endregion
+
+        #endregion
+
+        #region 7 Matching Alternatives
+
         /// <summary>
-        /// 7 Matching Alternatives
+        /// 
         /// </summary>
         [Fact]
         public void MatchingAlternatives()
@@ -1066,7 +1095,7 @@ WHERE {
         }
 
         /// <summary>
-        /// 7 Matching Alternatives
+        /// 
         /// </summary>
         [Fact]
         public void MatchingAlternatives_Tweak()
@@ -1136,7 +1165,7 @@ WHERE {
         }
 
         /// <summary>
-        /// 7 Matching Alternatives
+        /// 
         /// </summary>
         [Fact]
         public void MatchingAlternatives_Example2_Tweak()
@@ -1202,7 +1231,7 @@ WHERE {
         }
 
         /// <summary>
-        /// 7 Matching Alternatives
+        ///
         /// </summary>
         [Fact]
         public void MatchingAlternatives_Example3_Tweak()
@@ -1284,10 +1313,16 @@ WHERE {
             Assert.Equal("Alice", selectQueryResult.SelectResults.Rows[1]["?AUTHOR"]);
         }
 
+        #endregion
+
+        #region 8 Negation
+
+        #region 8.1 Filtering Using Graph Patterns
+
+        #region 8.1.1 Testing For the Absence of a Pattern
+
         /// <summary>
-        /// 8 Negation
-        /// 8.1 Filtering Using Graph Patterns
-        /// 8.1.1 Testing For the Absence of a Pattern
+        /// 
         /// </summary>
         [Fact]
         public void TestingForTheAbsenceOfPattern()
@@ -1360,8 +1395,12 @@ WHERE {
             Assert.Equal("http://example/bob", selectQueryResult.SelectResults.Rows[0]["?PERSON"]);
         }
 
+        #endregion
+
+        #region 8.1.2 Testing For the Presence of a Pattern
+
         /// <summary>
-        /// 8.1.2 Testing For the Presence of a Pattern
+        /// 
         /// </summary>
         [Fact]
         public void TestingForThePresenceOfPattern()
@@ -1434,7 +1473,11 @@ WHERE {
             Assert.Equal("http://example/alice", selectQueryResult.SelectResults.Rows[0]["?PERSON"]);
         }
 
-        // 8.2 Removing Possible Solutions
+        #endregion
+
+        #endregion
+
+        #region 8.2 Removing Possible Solutions
 
         [Fact]
         public void RemovingPossibleSolutions()
@@ -1461,8 +1504,11 @@ WHERE {
             Assert.True(false);
         }
 
-        // 8.3 Relationship and differences between NOT EXISTS and MINUS
-        // 8.3.1 Example: Sharing of variables
+        #endregion
+
+        #region 8.3 Relationship and differences between NOT EXISTS and MINUS
+
+        #region 8.3.1 Example: Sharing of variables
 
         [Fact]
         public void SharingOfVariablesFILTER_NOT_EXISTS()
@@ -1546,7 +1592,9 @@ SELECT *
             Assert.True(false);
         }
 
-        // 8.3.2 Example: Fixed pattern
+        #endregion
+
+        #region 8.3.2 Example: Fixed pattern
 
         /// <summary>
         /// Not possible to build the filter : FILTER NOT EXISTS { :a :b :c }
@@ -1639,8 +1687,12 @@ SELECT *
             Assert.True(false);
         }
 
+        #endregion
+
+        #region 8.3.3 Example: Inner FILTERs
+
         /// <summary>
-        /// 8.3.3 Example: Inner FILTERs
+        /// 
         /// </summary>
         [Fact]
         public void InnerFILTERs__FILTER_NOT_EXISTS_FILTER()
@@ -1706,7 +1758,7 @@ SELECT *
         }
 
         /// <summary>
-        /// 8.3.3 Example: Inner FILTERs
+        /// 
         /// </summary>
         [Fact]
         public void InnerFILTERs__MINUS_FILTER()
@@ -1726,9 +1778,19 @@ SELECT * WHERE {
             Assert.True(false);
         }
 
-        // 9 Property Paths
-        // 9.1 Property Path Syntax
-        // 9.2 Examples
+        #endregion
+
+        #endregion
+
+        #endregion
+
+        #region 9 Property Paths
+
+        #region 9.1 Property Path Syntax
+        #endregion
+
+        #region 9.2 Examples
+
         [Fact]
         public void PropertyPathSyntax_Alternatives_Test1()
         {
@@ -2109,7 +2171,6 @@ WHERE {
             Assert.Equal("Snowy@EN", selectQueryResult.SelectResults.Rows[1]["?NAME"]);
         }
 
-
         [Fact]
         public void InversePropertyPaths_AddSequenceStep_Inverse_Test1()
         {
@@ -2176,8 +2237,6 @@ WHERE {
             Assert.Equal("Charlie", selectQueryResult.SelectResults.Rows[1]["?NAME"]);
             Assert.Equal("Snoopy@EN", selectQueryResult.SelectResults.Rows[2]["?NAME"]);
         }
-
-
 
         [Fact]
         public void InversePropertyPaths_AddSequenceStep_Inverse_Test2()
@@ -2304,8 +2363,9 @@ WHERE {
             Assert.True(false);
         }
 
-        #region  9.3 Property Paths and Equivalent Patterns
+        #endregion
 
+        #region 9.3 Property Paths and Equivalent Patterns
 
         [Fact]
         public void PropertyPathsAndEquivalentPatterns_Test1()
@@ -2500,6 +2560,8 @@ GROUP BY ?X
         #endregion
 
         #region 9.4 Arbitrary Length Path Matching
+
+        #endregion
 
         #endregion
 
@@ -2816,7 +2878,6 @@ HAVING ((SUM(?LPRICE) > "10"^^<http://www.w3.org/2001/XMLSchema#integer>))
             Assert.Equal("21^^http://www.w3.org/2001/XMLSchema#double", selectQueryResult.SelectResults.Rows[0]["?TOTALPRICE"]);
         }
 
-
         #endregion
 
         #region 11.2 GROUP BY
@@ -2834,7 +2895,6 @@ HAVING ((SUM(?LPRICE) > "10"^^<http://www.w3.org/2001/XMLSchema#integer>))
         #region 11.5 Aggregate Example (with errors)
         #endregion
 
-
         #endregion
 
         #region 12 Subqueries
@@ -2843,6 +2903,56 @@ HAVING ((SUM(?LPRICE) > "10"^^<http://www.w3.org/2001/XMLSchema#integer>))
 
         #region 13 RDF Dataset
 
+        #region 13.1 Examples of RDF Datasets
+        #endregion
+
+        #region 13.2 Specifying RDF Datasets
+        #endregion
+
+        #region 13.3 Querying the Dataset
+        #endregion
+
+        #endregion
+
+        #region 14 Basic Federated Query
+        #endregion
+
+        #region 15 Solution Sequences and Modifiers
+
+        #region 15.1 ORDER BY
+        #endregion
+
+        #region 15.2 Projection
+        #endregion
+
+        #region 15.3 Duplicate Solutions
+        #endregion
+
+        #region 15.4 OFFSET
+        #endregion
+
+        #region 15.5 LIMIT
+        #endregion
+
+        #endregion
+
+        #region 16 Query Forms
+
+        #region 16.1 SELECT
+        #endregion
+
+        #region 16.2 CONSTRUCT
+        #endregion
+
+        #region 16.4 DESCRIBE (Informative)
+        #endregion
+
+        #endregion
+
+        #region 17 Expressions and Testing Values
+        #endregion
+
+        #region 19 SPARQL Grammar
         #endregion
     }
 }
