@@ -2805,7 +2805,7 @@ WHERE {
         #region 11.1 Aggregate Example
 
         [Fact]
-        public void AggregateExample()
+        public void Aggregate_Example()
         {
             // CREATE NAMESPACE
             var exNs = new RDFNamespace("ex", "http://books.example/");
@@ -2882,22 +2882,257 @@ HAVING ((SUM(?LPRICE) > "10"^^<http://www.w3.org/2001/XMLSchema#integer>))
 
         #region 11.2 GROUP BY
 
+        [Fact]
+        public void Aggregate_GROUP_BY()
+        {
+            // CREATE NAMESPACE
+            var exNs = new RDFNamespace("ex", "http://example/");
+            RDFNamespaceRegister.AddNamespace(exNs);
+
+            RDFNamespaceRegister.SetDefaultNamespace(exNs);
+
+            string filePath = GetPath(@"Files\Test22.ttl");
+            RDFGraph graph = RDFGraph.FromFile(RDFModelEnums.RDFFormats.Turtle, filePath);
+
+            Assert.Equal(8, graph.TriplesCount);
+
+            /*
+        SELECT (AVG(?y) AS ?avg)
+WHERE {
+ ?a :x ?x ;
+    :y ?y .
+}
+GROUP BY ?x
+        */
+
+            var a = new RDFVariable("a");
+            var x = new RDFVariable("x");
+            var y = new RDFVariable("y");
+            var avg = new RDFVariable("avg");
+
+            var gm = new RDFGroupByModifier(new List<RDFVariable> { x });
+            gm.AddAggregator(new RDFAvgAggregator(y, avg));
+
+            // Select query
+            RDFSelectQuery selectQuery = new RDFSelectQuery()
+                .AddPrefix(exNs)
+                .AddPatternGroup(new RDFPatternGroup("PG1")
+                    .AddPattern(new RDFPattern(a, new RDFResource(exNs + "x"), x))
+                    .AddPattern(new RDFPattern(a, new RDFResource(exNs + "y"), y))
+                    )
+                .AddModifier(gm)
+                .AddProjectionVariable(x)
+                .AddProjectionVariable(avg);
+
+            #region generated sparql query
+            /*
+PREFIX ex: <http://example/>
+
+SELECT ?X (AVG(?Y) AS ?AVG)
+WHERE {
+  {
+    ?A ex:x ?X .
+    ?A ex:y ?Y .
+  }
+}
+GROUP BY ?X
+            */
+            string sparqlCommand = selectQuery.ToString();
+            #endregion
+
+            // APPLY SELECT QUERY TO GRAPH
+            RDFSelectQueryResult selectQueryResult = selectQuery.ApplyToGraph(graph);
+
+            Assert.Equal(2, selectQueryResult.SelectResultsCount);
+
+            Assert.Equal("1.5^^http://www.w3.org/2001/XMLSchema#double", selectQueryResult.SelectResults.Rows[0]["?AVG"]);
+            Assert.Equal("8.5^^http://www.w3.org/2001/XMLSchema#double", selectQueryResult.SelectResults.Rows[1]["?AVG"]);
+        }
+
         #endregion
 
         #region 11.3 HAVING
+
+        [Fact]
+        void Aggregate_HAVING()
+        {
+            // CREATE NAMESPACE
+            var exNs = new RDFNamespace("ex", "http://data.example/");
+            RDFNamespaceRegister.AddNamespace(exNs);
+
+            RDFNamespaceRegister.SetDefaultNamespace(exNs);
+
+            /*
+PREFIX : <http://data.example/>
+SELECT (AVG(?size) AS ?asize)
+WHERE {
+  ?x :size ?size
+}
+GROUP BY ?x
+HAVING(AVG(?size) > 10)
+             */
+
+            string filePath = GetPath(@"Files\Test23.ttl");
+            RDFGraph graph = RDFGraph.FromFile(RDFModelEnums.RDFFormats.Turtle, filePath);
+
+            Assert.Equal(4, graph.TriplesCount);
+
+            var size = new RDFVariable("size");
+            var asize = new RDFVariable("asize");
+            var x = new RDFVariable("x");
+
+            var gm = new RDFGroupByModifier(new List<RDFVariable> { x });
+            gm.AddAggregator(new RDFAvgAggregator(size, asize)
+                .SetHavingClause(RDFQueryEnums.RDFComparisonFlavors.GreaterThan, new RDFTypedLiteral("10", RDFModelEnums.RDFDatatypes.XSD_INTEGER)
+            ));
+
+            // Select query
+            RDFSelectQuery selectQuery = new RDFSelectQuery()
+                .AddPrefix(exNs)
+                .AddPatternGroup(new RDFPatternGroup("PG1")
+                    .AddPattern(new RDFPattern(x, new RDFResource(exNs + "size"), size))
+                    )
+                .AddModifier(gm)
+                .AddProjectionVariable(x)
+                .AddProjectionVariable(asize);
+
+            #region generated sparql query
+            /*
+PREFIX ex: <http://data.example/>
+
+SELECT ?X (AVG(?SIZE) AS ?ASIZE)
+WHERE {
+  {
+    ?X ex:size ?SIZE .
+  }
+}
+GROUP BY ?X
+HAVING ((AVG(?SIZE) > "10"^^<http://www.w3.org/2001/XMLSchema#integer>))
+            */
+            string sparqlCommand = selectQuery.ToString();
+            #endregion
+
+            // APPLY SELECT QUERY TO GRAPH
+            RDFSelectQueryResult selectQueryResult = selectQuery.ApplyToGraph(graph);
+
+            Assert.Equal(1, selectQueryResult.SelectResultsCount);
+
+            Assert.Equal("http://data.example/object2", selectQueryResult.SelectResults.Rows[0]["?X"]);
+            Assert.Equal("15^^http://www.w3.org/2001/XMLSchema#double", selectQueryResult.SelectResults.Rows[0]["?ASIZE"]);
+        }
 
         #endregion
 
         #region 11.4 Aggregate Projection Restrictions
 
+        // Not possible to build : MIN(?y) * 2 AS ?min
+
         #endregion
 
         #region 11.5 Aggregate Example (with errors)
+
+        // Not possible to build : ((MIN(?p) + MAX(?p)) / 2 AS ?c)
+
         #endregion
 
         #endregion
 
         #region 12 Subqueries
+
+        [Fact]
+        void Subqueries()
+        {
+            // CREATE NAMESPACE
+            var exNs = new RDFNamespace("ex", "http://people.example/");
+            RDFNamespaceRegister.AddNamespace(exNs);
+
+            RDFNamespaceRegister.SetDefaultNamespace(exNs);
+
+            /*
+PREFIX : <http://people.example/>
+SELECT ?y ?minName
+WHERE {
+  :alice :knows ?y .
+  {
+    SELECT ?y (MIN(?name) AS ?minName)
+    WHERE {
+      ?y :name ?name .
+    } GROUP BY ?y
+  }
+}             
+             */
+
+            string filePath = GetPath(@"Files\Test24.ttl");
+            RDFGraph graph = RDFGraph.FromFile(RDFModelEnums.RDFFormats.Turtle, filePath);
+
+            Assert.Equal(11, graph.TriplesCount);
+
+
+            var y = new RDFVariable("y");
+            var name = new RDFVariable("name");
+            var minName = new RDFVariable("minName");
+
+            var gm = new RDFGroupByModifier(new List<RDFVariable> { y });
+            gm.AddAggregator(new RDFMinAggregator(name, minName, RDFQueryEnums.RDFMinMaxAggregatorFlavors.String));
+
+            // Select query
+            RDFSelectQuery subquery = new RDFSelectQuery()
+                .AddPrefix(exNs)
+                .AddPatternGroup(new RDFPatternGroup("PG1")
+                    .AddPattern(new RDFPattern(y, new RDFResource(exNs + "name"), name))
+                    )
+                .AddModifier(gm);
+
+            // Select query
+            RDFSelectQuery selectQuery = new RDFSelectQuery()
+                .AddPrefix(exNs)
+                .AddPatternGroup(new RDFPatternGroup("PG1")
+                    .AddPattern(new RDFPattern(new RDFResource(exNs + "alice"), new RDFResource(exNs + "knows"), y))
+                )
+                .AddSubQuery(subquery)
+                .AddProjectionVariable(y)
+                .AddProjectionVariable(minName);
+
+            #region generated sparql query
+            /*
+PREFIX ex: <http://people.example/>
+
+SELECT ?Y ?MINNAME
+WHERE {
+  {
+    ex:alice ex:knows ?Y .
+  }
+  {
+    SELECT ?Y (MIN(?NAME) AS ?MINNAME)
+    WHERE {
+      {
+        ?Y ex:name ?NAME .
+      }
+    }
+    GROUP BY ?Y
+  }
+}
+            */
+            string sparqlCommand = selectQuery.ToString();
+            #endregion
+
+            // APPLY SELECT QUERY TO GRAPH
+            RDFSelectQueryResult selectQueryResult = selectQuery.ApplyToGraph(graph);
+
+            Assert.Equal(2, selectQueryResult.SelectResultsCount);
+
+            /*
+y	    minName
+:bob	"B. Bar"
+:carol	"C. Baz"
+             */
+
+            Assert.Equal("http://people.example/bob", selectQueryResult.SelectResults.Rows[0]["?Y"]);
+            Assert.Equal("B. Bar", selectQueryResult.SelectResults.Rows[0]["?MINNAME"]);
+
+            Assert.Equal("http://people.example/carol", selectQueryResult.SelectResults.Rows[1]["?Y"]);
+            Assert.Equal("C. Baz", selectQueryResult.SelectResults.Rows[1]["?MINNAME"]);
+        }
 
         #endregion
 

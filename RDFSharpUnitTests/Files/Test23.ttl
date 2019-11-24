@@ -1,0 +1,7 @@
+﻿@prefix : <http://data.example/> .
+
+:object1 :size 1.0 .
+:object1 :size 2.0 .
+
+:object2 :size 10.0 .
+:object2 :size 20.0 .

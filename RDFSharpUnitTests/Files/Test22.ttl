@@ -1,0 +1,13 @@
+﻿@prefix : <http://example/> .
+
+:command1 :x "customer1" .
+:command1 :y 1.0 .
+
+:command2 :x "customer1" .
+:command2 :y 2.0 .
+
+:command3 :x "customer2" .
+:command3 :y 8 .
+
+:command4 :x "customer2" .
+:command4 :y 9 .
