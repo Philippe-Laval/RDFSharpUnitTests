@@ -4056,7 +4056,121 @@ _:y foaf:name "Eve" .
 
         #endregion
 
+        #region 16.3 ASK
+
+        [Fact]
+        void ASK_Test1()
+        {
+            var vcardNs = new RDFNamespace("vcard", "http://www.w3.org/2001/vcard-rdf/3.0#");
+            RDFNamespaceRegister.AddNamespace(vcardNs);
+
+            //RDFNamespaceRegister.SetDefaultNamespace(exNs);
+
+            var foafNs = RDFNamespaceRegister.GetByPrefix("foaf");
+
+            /*
+PREFIX foaf:    <http://xmlns.com/foaf/0.1/>
+ASK  { ?x foaf:name  "Alice" }
+             */
+
+            string filePath = GetPath(@"Files\Test33.ttl");
+            RDFGraph graph = RDFGraph.FromFile(RDFModelEnums.RDFFormats.Turtle, filePath);
+
+            Assert.Equal(4, graph.TriplesCount);
+
+            var x = new RDFVariable("x");
+            var name = new RDFVariable("name");
+
+            // Ask query
+            RDFAskQuery askQuery = new RDFAskQuery()
+                .AddPrefix(foafNs)
+                .AddPatternGroup(new RDFPatternGroup("PG1")
+                    .AddPattern(new RDFPattern(x, RDFVocabulary.FOAF.NAME, new RDFPlainLiteral("Alice")))
+                );
+
+            #region generated sparql query
+            /*
+PREFIX foaf: <http://xmlns.com/foaf/0.1/>
+
+ASK
+WHERE {
+  {
+    ?X foaf:name "Alice" .
+  }
+}          
+             */
+            string sparqlCommand = askQuery.ToString();
+            #endregion
+
+            // APPLY SELECT QUERY TO GRAPH
+            RDFAskQueryResult askQueryResult = askQuery.ApplyToGraph(graph);
+
+            Assert.True(askQueryResult.AskResult);
+        }
+
+        [Fact]
+        void ASK_Test2()
+        {
+            var vcardNs = new RDFNamespace("vcard", "http://www.w3.org/2001/vcard-rdf/3.0#");
+            RDFNamespaceRegister.AddNamespace(vcardNs);
+
+            //RDFNamespaceRegister.SetDefaultNamespace(exNs);
+
+            var foafNs = RDFNamespaceRegister.GetByPrefix("foaf");
+
+            /*
+PREFIX foaf:    <http://xmlns.com/foaf/0.1/>
+ASK  { ?x foaf:name  "Alice" ;
+          foaf:mbox  <mailto:alice@work.example> }
+            */
+
+            string filePath = GetPath(@"Files\Test33.ttl");
+            RDFGraph graph = RDFGraph.FromFile(RDFModelEnums.RDFFormats.Turtle, filePath);
+
+            Assert.Equal(4, graph.TriplesCount);
+
+            var x = new RDFVariable("x");
+            var name = new RDFVariable("name");
+
+            // Ask query
+            RDFAskQuery askQuery = new RDFAskQuery()
+                .AddPrefix(foafNs)
+                .AddPatternGroup(new RDFPatternGroup("PG1")
+                    .AddPattern(new RDFPattern(x, RDFVocabulary.FOAF.NAME, new RDFPlainLiteral("Alice")))
+                    .AddPattern(new RDFPattern(x, RDFVocabulary.FOAF.MBOX, new RDFResource("mailto:alice@work.example")))
+                );
+
+            #region generated sparql query
+            /*
+PREFIX foaf: <http://xmlns.com/foaf/0.1/>
+
+ASK
+WHERE {
+  {
+    ?X foaf:name "Alice" .
+    ?X foaf:mbox <mailto:alice@work.example> .
+  }
+}       
+             */
+            string sparqlCommand = askQuery.ToString();
+            #endregion
+
+            // APPLY SELECT QUERY TO GRAPH
+            RDFAskQueryResult askQueryResult = askQuery.ApplyToGraph(graph);
+
+            Assert.False(askQueryResult.AskResult);
+        }
+
+
+        #endregion
+
         #region 16.4 DESCRIBE (Informative)
+
+        /*
+         DESCRIBE <http://example.org/>
+         */
+
+
         #endregion
 
         #endregion
