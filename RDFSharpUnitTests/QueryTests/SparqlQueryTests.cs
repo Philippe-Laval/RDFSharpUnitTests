@@ -3808,7 +3808,7 @@ WHERE {
         #region 16.2 CONSTRUCT
 
         [Fact]
-        void CONSTRUCT_Query()
+        void CONSTRUCT_Query_Test1()
         {
             var vcardNs = new RDFNamespace("vcard", "http://www.w3.org/2001/vcard-rdf/3.0#");
             RDFNamespaceRegister.AddNamespace(vcardNs);
@@ -3869,6 +3869,190 @@ WHERE {
             Assert.Equal("http://www.w3.org/2001/vcard-rdf/3.0#FN", constructQueryResult.ConstructResults.Rows[0][1]);
             Assert.Equal("Alice", constructQueryResult.ConstructResults.Rows[0][2]);
         }
+
+        #region 16.2.1 Templates with Blank Nodes
+
+        [Fact]
+        void CONSTRUCT_Query_Test2()
+        {
+            var vcardNs = new RDFNamespace("vcard", "http://www.w3.org/2001/vcard-rdf/3.0#");
+            RDFNamespaceRegister.AddNamespace(vcardNs);
+
+            //RDFNamespaceRegister.SetDefaultNamespace(exNs);
+
+            var foafNs = RDFNamespaceRegister.GetByPrefix("foaf");
+
+            /*
+PREFIX foaf:    <http://xmlns.com/foaf/0.1/>
+PREFIX vcard:   <http://www.w3.org/2001/vcard-rdf/3.0#>
+
+CONSTRUCT { ?x  vcard:N _:v .
+            _:v vcard:givenName ?gname .
+            _:v vcard:familyName ?fname }
+WHERE
+ {
+    { ?x foaf:firstname ?gname } UNION  { ?x foaf:givenname   ?gname } .
+    { ?x foaf:surname   ?fname } UNION  { ?x foaf:family_name ?fname } .
+ }
+             */
+
+            string filePath = GetPath(@"Files\Test31.ttl");
+            RDFGraph graph = RDFGraph.FromFile(RDFModelEnums.RDFFormats.Turtle, filePath);
+
+            Assert.Equal(4, graph.TriplesCount);
+
+            var x = new RDFVariable("x");
+            var gname = new RDFVariable("gname");
+            var fname = new RDFVariable("fname");
+
+            // Select query
+            RDFConstructQuery constructQuery = new RDFConstructQuery()
+                .AddPrefix(vcardNs)
+                .AddPrefix(foafNs)
+                .AddPatternGroup(new RDFPatternGroup("PG1")
+                    .AddPattern(new RDFPattern(x, RDFVocabulary.FOAF.FIRSTNAME, gname).UnionWithNext())
+                    .AddPattern(new RDFPattern(x, RDFVocabulary.FOAF.GIVEN_NAME, gname))
+                )
+                .AddPatternGroup(new RDFPatternGroup("PG2")
+                    .AddPattern(new RDFPattern(x, RDFVocabulary.FOAF.SURNAME, fname).UnionWithNext())
+                    .AddPattern(new RDFPattern(x, RDFVocabulary.FOAF.FAMILY_NAME, fname))
+                )
+                .AddTemplate(new RDFPattern(x, new RDFResource(vcardNs + "N"), new RDFResource("_:v")))
+                .AddTemplate(new RDFPattern(new RDFResource("_:v"), new RDFResource(vcardNs + "givenName"), gname))
+                .AddTemplate(new RDFPattern(new RDFResource("_:v"), new RDFResource(vcardNs + "familyName"), fname));
+
+            #region generated sparql query
+            /*
+PREFIX vcard: <http://www.w3.org/2001/vcard-rdf/3.0#>
+PREFIX foaf: <http://xmlns.com/foaf/0.1/>
+
+CONSTRUCT
+{
+  ?X vcard:N _:v .
+  _:v vcard:givenName ?GNAME .
+  _:v vcard:familyName ?FNAME .
+}
+WHERE {
+  {
+    { ?X foaf:firstName ?GNAME }
+    UNION
+    { ?X foaf:givenName ?GNAME }
+  }
+  {
+    { ?X foaf:surname ?FNAME }
+    UNION
+    { ?X foaf:familyName ?FNAME }
+  }
+}        
+             */
+            string sparqlCommand = constructQuery.ToString();
+            #endregion
+
+            // APPLY SELECT QUERY TO GRAPH
+            RDFConstructQueryResult constructQueryResult = constructQuery.ApplyToGraph(graph);
+
+            /* 
+@prefix vcard: <http://www.w3.org/2001/vcard-rdf/3.0#> .
+
+_:v1 vcard:N         _:x .
+_:x vcard:givenName  "Alice" .
+_:x vcard:familyName "Hacker" .
+
+_:v2 vcard:N         _:z .
+_:z vcard:givenName  "Bob" .
+_:z vcard:familyName "Hacker" .
+*/
+
+            Assert.Equal(6, constructQueryResult.ConstructResultsCount);
+        }
+
+        #endregion
+
+        #region 16.2.2 Accessing Graphs in the RDF Dataset
+        // Not possible to build such query
+        #endregion
+
+        #region 16.2.3 Solution Modifiers and CONSTRUCT
+
+        [Fact]
+        void CONSTRUCT_Query_Test3()
+        {
+            var siteNs = new RDFNamespace("site", "http://example.org/stats#");
+            RDFNamespaceRegister.AddNamespace(siteNs);
+
+            //RDFNamespaceRegister.SetDefaultNamespace(exNs);
+
+            var foafNs = RDFNamespaceRegister.GetByPrefix("foaf");
+
+            /*
+PREFIX foaf: <http://xmlns.com/foaf/0.1/>
+PREFIX site: <http://example.org/stats#>
+
+CONSTRUCT { [] foaf:name ?name }
+WHERE
+{ [] foaf:name ?name ;
+     site:hits ?hits .
+}
+ORDER BY desc(?hits)
+LIMIT 2
+             */
+
+            string filePath = GetPath(@"Files\Test32.ttl");
+            RDFGraph graph = RDFGraph.FromFile(RDFModelEnums.RDFFormats.Turtle, filePath);
+
+            Assert.Equal(6, graph.TriplesCount);
+
+            var hits = new RDFVariable("hits");
+            var name = new RDFVariable("name");
+
+            var t = new RDFOrderByModifier(name, RDFQueryEnums.RDFOrderByFlavors.ASC);
+
+            // Select query
+            RDFConstructQuery constructQuery = new RDFConstructQuery()
+                .AddPrefix(siteNs)
+                .AddPrefix(foafNs)
+                .AddPatternGroup(new RDFPatternGroup("PG1")
+                    .AddPattern(new RDFPattern(new RDFResource("_:"), RDFVocabulary.FOAF.NAME, name))
+                    .AddPattern(new RDFPattern(new RDFResource("_:"), new RDFResource(siteNs + "hits"), hits))
+                )
+                // Not possible
+                //.AddModifier(t);
+                .AddModifier(new RDFLimitModifier(2))
+                .AddTemplate(new RDFPattern(new RDFResource("_:"), RDFVocabulary.FOAF.NAME, name));
+
+            #region generated sparql query
+            /*
+PREFIX site: <http://example.org/stats#>
+PREFIX foaf: <http://xmlns.com/foaf/0.1/>
+
+CONSTRUCT
+{
+  _: foaf:name ?NAME .
+}
+WHERE {
+  {
+    _: foaf:name ?NAME .
+    _: site:hits ?HITS .
+  }
+}
+LIMIT 2        
+             */
+            string sparqlCommand = constructQuery.ToString();
+            #endregion
+
+            // APPLY SELECT QUERY TO GRAPH
+            RDFConstructQueryResult constructQueryResult = constructQuery.ApplyToGraph(graph);
+
+            /* 
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+_:x foaf:name "Alice" .
+_:y foaf:name "Eve" .
+*/
+
+            Assert.Equal(2, constructQueryResult.ConstructResultsCount);
+        }
+
+        #endregion
 
         #endregion
 
