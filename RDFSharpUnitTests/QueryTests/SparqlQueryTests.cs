@@ -4166,10 +4166,189 @@ WHERE {
 
         #region 16.4 DESCRIBE (Informative)
 
-        /*
-         DESCRIBE <http://example.org/>
-         */
+        #region 16.4.1 Explicit IRIs
 
+        [Fact]
+        void DESCRIBE_Test1()
+        {
+            var exNs = new RDFNamespace("vcard", "http://example.org/ns#");
+            RDFNamespaceRegister.AddNamespace(exNs);
+
+            RDFNamespaceRegister.SetDefaultNamespace(exNs);
+
+            string filePath = GetPath(@"Files\Test25.ttl");
+            RDFGraph graph = RDFGraph.FromFile(RDFModelEnums.RDFFormats.Turtle, filePath);
+
+            Assert.Equal(8, graph.TriplesCount);
+
+            /*
+             DESCRIBE <http://example.org/>
+             */
+
+            RDFDescribeQuery describeQuery = new RDFDescribeQuery()
+                .AddDescribeTerm(new RDFResource("http://example.org/ns#"));
+
+            #region generated sparql query
+            /*
+DESCRIBE <http://example.org/ns#>
+WHERE {
+}      
+             */
+            string sparqlCommand = describeQuery.ToString();
+            #endregion
+
+            RDFDescribeQueryResult describeResult = describeQuery.ApplyToGraph(graph);
+
+            // no result
+        }
+
+        #endregion
+
+        #region 16.4.2 Identifying Resources
+
+        [Fact]
+        void DESCRIBE_Test2()
+        {
+            var exNs = new RDFNamespace("vcard", "http://example.org/ns#");
+            RDFNamespaceRegister.AddNamespace(exNs);
+
+            RDFNamespaceRegister.SetDefaultNamespace(exNs);
+
+            string filePath = GetPath(@"Files\Test30.ttl");
+            RDFGraph graph = RDFGraph.FromFile(RDFModelEnums.RDFFormats.Turtle, filePath);
+
+            Assert.Equal(2, graph.TriplesCount);
+
+            /*
+PREFIX foaf:   <http://xmlns.com/foaf/0.1/>
+DESCRIBE ?x
+WHERE    { ?x foaf:mbox <mailto:alice@example.org> }
+             */
+
+            var x = new RDFVariable("x");
+
+            RDFDescribeQuery describeQuery = new RDFDescribeQuery()
+                .AddPrefix(RDFNamespaceRegister.GetByPrefix("foaf"))
+                .AddPatternGroup(new RDFPatternGroup("PG1")
+                    .AddPattern(new RDFPattern(x, RDFVocabulary.FOAF.MBOX, new RDFResource("mailto:alice@example.org")))
+                )
+                .AddDescribeTerm(x);
+
+            #region generated sparql query
+            /*
+PREFIX foaf: <http://xmlns.com/foaf/0.1/>
+
+DESCRIBE ?X
+WHERE {
+  {
+    ?X foaf:mbox <mailto:alice@example.org> .
+  }
+} 
+             */
+            string sparqlCommand = describeQuery.ToString();
+            #endregion
+
+            RDFDescribeQueryResult describeResult = describeQuery.ApplyToGraph(graph);
+
+            Assert.Equal(2, describeResult.DescribeResultsCount);
+        }
+
+        [Fact]
+        void DESCRIBE_Test3()
+        {
+            var exNs = new RDFNamespace("vcard", "http://example.org/ns#");
+            RDFNamespaceRegister.AddNamespace(exNs);
+
+            RDFNamespaceRegister.SetDefaultNamespace(exNs);
+
+            string filePath = GetPath(@"Files\Test27.ttl");
+            RDFGraph graph = RDFGraph.FromFile(RDFModelEnums.RDFFormats.Turtle, filePath);
+
+            Assert.Equal(6, graph.TriplesCount);
+
+            /*
+    PREFIX foaf:   <http://xmlns.com/foaf/0.1/>
+    DESCRIBE ?x
+    WHERE    { ?x foaf:name "Alice" }         
+             */
+
+            var x = new RDFVariable("x");
+
+            RDFDescribeQuery describeQuery = new RDFDescribeQuery()
+                .AddPrefix(RDFNamespaceRegister.GetByPrefix("foaf"))
+                .AddPatternGroup(new RDFPatternGroup("PG1")
+                    .AddPattern(new RDFPattern(x, RDFVocabulary.FOAF.NAME, new RDFPlainLiteral("Alice")))
+                )
+                .AddDescribeTerm(x);
+
+            #region generated sparql query
+            /*
+PREFIX foaf: <http://xmlns.com/foaf/0.1/>
+
+DESCRIBE ?X
+WHERE {
+  {
+    ?X foaf:name "Alice" .
+  }
+}
+             */
+            string sparqlCommand = describeQuery.ToString();
+            #endregion
+
+            RDFDescribeQueryResult describeResult = describeQuery.ApplyToGraph(graph);
+
+            Assert.Equal(6, describeResult.DescribeResultsCount);
+        }
+
+        [Fact]
+        void DESCRIBE_Test4()
+        {
+            string filePath = GetPath(@"Files\Test1.ttl");
+            RDFGraph graph = RDFGraph.FromFile(RDFModelEnums.RDFFormats.Turtle, filePath);
+
+            Assert.Equal(11, graph.TriplesCount);
+
+            /*
+    PREFIX foaf:   <http://xmlns.com/foaf/0.1/>
+    DESCRIBE ?x ?y <http://example.org/>
+    WHERE    {?x foaf:knows ?y}         
+             */
+
+            var x = new RDFVariable("x");
+            var y = new RDFVariable("y");
+
+            RDFDescribeQuery describeQuery = new RDFDescribeQuery()
+                .AddPrefix(RDFNamespaceRegister.GetByPrefix("foaf"))
+                .AddPatternGroup(new RDFPatternGroup("PG1")
+                    .AddPattern(new RDFPattern(x, RDFVocabulary.FOAF.KNOWS, y))
+                )
+                .AddDescribeTerm(x)
+                .AddDescribeTerm(y);
+
+            #region generated sparql query
+            /*
+PREFIX foaf: <http://xmlns.com/foaf/0.1/>
+
+DESCRIBE ?X ?Y
+WHERE {
+  {
+    ?X foaf:knows ?Y .
+  }
+} 
+             */
+            string sparqlCommand = describeQuery.ToString();
+            #endregion
+
+            RDFDescribeQueryResult describeResult = describeQuery.ApplyToGraph(graph);
+
+            Assert.Equal(54, describeResult.DescribeResultsCount);
+        }
+
+
+        #endregion
+
+        #region 16.4.3 Descriptions of Resources
+        #endregion
 
         #endregion
 
